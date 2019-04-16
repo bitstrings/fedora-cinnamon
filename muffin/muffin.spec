@@ -1,6 +1,6 @@
 Name:          muffin
 Version:       4.0.8
-Release:       103git%{?dist}
+Release:       104git%{?dist}
 Summary:       Window and compositing manager based on Clutter
 
 License:       GPLv2+
