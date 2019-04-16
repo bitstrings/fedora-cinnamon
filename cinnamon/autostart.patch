@@ -1,0 +1,24 @@
+Index: Cinnamon-3.6.6/files/usr/share/cinnamon-session/sessions/cinnamon.session
+===================================================================
+--- Cinnamon-3.6.6.orig/files/usr/share/cinnamon-session/sessions/cinnamon.session
++++ Cinnamon-3.6.6/files/usr/share/cinnamon-session/sessions/cinnamon.session
+@@ -1,6 +1,6 @@
+ [Cinnamon Session]
+ Name=Cinnamon
+-RequiredComponents=cinnamon;cinnamon-screensaver;nemo-autostart;nm-applet;cinnamon-killer-daemon;
++RequiredComponents=cinnamon;cinnamon-screensaver;nemo-autostart;cinnamon-killer-daemon;polkit-cinnamon-authentication-agent-1;
+ DesktopName=X-Cinnamon
+ 
+ 
+Index: Cinnamon-3.6.6/files/usr/share/cinnamon-session/sessions/cinnamon2d.session
+===================================================================
+--- Cinnamon-3.6.6.orig/files/usr/share/cinnamon-session/sessions/cinnamon2d.session
++++ Cinnamon-3.6.6/files/usr/share/cinnamon-session/sessions/cinnamon2d.session
+@@ -1,6 +1,6 @@
+ [Cinnamon Session]
+ Name=Cinnamon (Software Rendering)
+-RequiredComponents=cinnamon2d;cinnamon-screensaver;nemo-autostart;nm-applet;cinnamon-killer-daemon;
++RequiredComponents=cinnamon2d;cinnamon-screensaver;nemo-autostart;cinnamon-killer-daemon;polkit-cinnamon-authentication-agent-1;
+ DesktopName=X-Cinnamon
+ 
+ 

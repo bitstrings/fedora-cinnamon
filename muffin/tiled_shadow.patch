@@ -1,0 +1,15 @@
+diff -Naur muffin-master.mint19/src/compositor/meta-window-actor.c muffin-master.mint19-MOD/src/compositor/meta-window-actor.c
+--- muffin-master.mint19/src/compositor/meta-window-actor.c	2019-04-07 19:52:15.000000000 -0400
++++ muffin-master.mint19-MOD/src/compositor/meta-window-actor.c	2019-04-08 19:42:06.963285814 -0400
+@@ -1237,11 +1237,6 @@
+       priv->window->fullscreen)
+     return FALSE;
+ 
+-  /* Don't shadow tiled windows of any type */
+-
+-  if (priv->window->tile_type != META_WINDOW_TILE_TYPE_NONE)
+-    return FALSE;
+-
+   /*
+    * Always put a shadow around windows with a frame - This should override
+    * the restriction about not putting a shadow around ARGB windows.
