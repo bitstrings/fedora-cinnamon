@@ -1,9 +1,8 @@
 %global gitdate 20190423
-%global shortcommit %(c=%{commit}; echo ${c:0:7})
 
 Name:          muffin
 Version:       4.0.8
-Release:       105.%{gitdate}git%{shortcommit}%{?dist}
+Release:       105.%{gitdate}git%{?dist}
 Summary:       Window and compositing manager based on Clutter
 
 License:       GPLv2+
