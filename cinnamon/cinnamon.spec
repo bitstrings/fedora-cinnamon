@@ -1,5 +1,5 @@
 %global commit c843f3664064742e2672e0fea528571a882d84ad
-%global gitdate 20190405
+%global gitdate 20190423
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
 
 %global __requires_exclude ^lib%{name}.so|^lib%{name}-js.so
