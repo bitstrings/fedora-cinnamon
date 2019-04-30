@@ -54,7 +54,7 @@ Header files and libraries for developing Muffin plugins. Also includes
 utilities for testing Metacity/Muffin themes.
 
 %prep
-#%autosetup -p1 -n muffin-master.mint19
+#autosetup -p1 -n muffin-master.mint19
 %autosetup -p1
 
 NOCONFIGURE=1 ./autogen.sh
