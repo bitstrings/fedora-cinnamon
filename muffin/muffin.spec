@@ -11,7 +11,7 @@ Source0:       %{url}/archive/%{version}/%{name}-%{version}.tar.gz
 #Source0:       %{url}/archive/master.mint19.tar.gz
 Source1:       muffin-adwaita.txt
 
-Patch0:        tiled_shadow.patch
+#Patch0:        tiled_shadow.patch
 #Patch0:        upstream.patch
 
 BuildRequires: desktop-file-utils
