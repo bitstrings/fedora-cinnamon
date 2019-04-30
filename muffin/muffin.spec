@@ -7,8 +7,8 @@ Summary:       Window and compositing manager based on Clutter
 
 License:       GPLv2+
 URL:           https://github.com/linuxmint/%{name}
-Source0:       %{url}/archive/%{version}/%{name}-%{version}.tar.gz
-#Source0:       %{url}/archive/master.mint19.tar.gz
+#Source0:       %{url}/archive/%{version}/%{name}-%{version}.tar.gz
+Source0:       %{url}/archive/master.mint19.tar.gz
 Source1:       muffin-adwaita.txt
 
 #Patch0:        tiled_shadow.patch
@@ -54,8 +54,7 @@ Header files and libraries for developing Muffin plugins. Also includes
 utilities for testing Metacity/Muffin themes.
 
 %prep
-#autosetup -p1 -n muffin-master.mint19
-%autosetup -p1
+%autosetup -p1 -n muffin-master.mint19
 
 NOCONFIGURE=1 ./autogen.sh
 
