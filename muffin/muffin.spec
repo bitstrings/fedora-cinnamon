@@ -2,7 +2,7 @@
 
 Name:          muffin
 Version:       4.0.8
-Release:       108.%{gitdate}git%{?dist}
+Release:       110.%{gitdate}git%{?dist}
 Summary:       Window and compositing manager based on Clutter
 
 License:       GPLv2+
@@ -11,7 +11,7 @@ URL:           https://github.com/linuxmint/%{name}
 Source0:       %{url}/archive/master.mint19.tar.gz
 Source1:       muffin-adwaita.txt
 
-#Patch0:        tiled_shadow.patch
+Patch0:        tiled_shadow.patch
 #Patch0:        upstream.patch
 
 BuildRequires: desktop-file-utils
