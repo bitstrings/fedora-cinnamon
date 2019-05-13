@@ -1,8 +1,8 @@
-%global gitdate 20190423
+%global gitdate 20190413
 
 Name:          muffin
 Version:       4.0.8
-Release:       110.%{gitdate}git%{?dist}
+Release:       111.%{gitdate}git%{?dist}
 Summary:       Window and compositing manager based on Clutter
 
 License:       GPLv2+
