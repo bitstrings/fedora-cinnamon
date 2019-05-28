@@ -1,5 +1,5 @@
 %global commit c843f3664064742e2672e0fea528571a882d84ad
-%global gitdate 20190513
+%global gitdate 20190627
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
 
 %global __requires_exclude ^lib%{name}.so|^lib%{name}-js.so
@@ -18,7 +18,7 @@
 
 Name:           cinnamon
 Version:        4.0.11
-Release:        103.%{gitdate}git%{shortcommit}%{?dist}
+Release:        104.%{gitdate}git%{shortcommit}%{?dist}
 Summary:        Window management and application launching for GNOME
 License:        GPLv2+ and LGPLv2+
 URL:            https://github.com/linuxmint/%{name}
