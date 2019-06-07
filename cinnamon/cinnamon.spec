@@ -17,8 +17,8 @@
 %global __python %{__python3}
 
 Name:           cinnamon
-Version:        4.0.11
-Release:        107.%{gitdate}git%{shortcommit}%{?dist}
+Version:        4.0.12
+Release:        200.%{gitdate}git%{shortcommit}%{?dist}
 Summary:        Window management and application launching for GNOME
 License:        GPLv2+ and LGPLv2+
 URL:            https://github.com/linuxmint/%{name}
