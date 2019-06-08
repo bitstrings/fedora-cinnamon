@@ -1,5 +1,5 @@
 diff --git a/src/compositor/meta-window-actor.c b/src/compositor/meta-window-actor.c
-index 3e44922..06c3215 100644
+index 3e44922..3eea19a 100644
 --- a/src/compositor/meta-window-actor.c
 +++ b/src/compositor/meta-window-actor.c
 @@ -969,8 +969,8 @@ meta_window_actor_has_shadow (MetaWindowActor *self)
@@ -8,7 +8,7 @@ index 3e44922..06c3215 100644
  
 -  if (meta_window_get_tile_type (priv->window) != META_WINDOW_TILE_TYPE_NONE)
 -    return FALSE;
-+  if (meta_window_get_tile_type (priv->window) != META_WINDOW_TILE_TYPE_NONE && !window->has_custom_frame_extents)
++  if (meta_window_get_tile_type (priv->window) != META_WINDOW_TILE_TYPE_NONE && !priv->window->has_custom_frame_extents)
 +    return TRUE;
  
    /*
