@@ -1,14 +1,14 @@
 diff --git a/src/compositor/meta-window-actor.c b/src/compositor/meta-window-actor.c
-index c1a6958..6106cf7 100644
+index 3e44922..06c3215 100644
 --- a/src/compositor/meta-window-actor.c
 +++ b/src/compositor/meta-window-actor.c
-@@ -1226,8 +1226,8 @@ meta_window_actor_has_shadow (MetaWindowActor *self)
+@@ -969,8 +969,8 @@ meta_window_actor_has_shadow (MetaWindowActor *self)
  
    /* Don't shadow tiled windows of any type */
  
--  if (window->tile_type != META_WINDOW_TILE_TYPE_NONE)
+-  if (meta_window_get_tile_type (priv->window) != META_WINDOW_TILE_TYPE_NONE)
 -    return FALSE;
-+  if (window->tile_type != META_WINDOW_TILE_TYPE_NONE && !window->has_custom_frame_extents)
++  if (meta_window_get_tile_type (priv->window) != META_WINDOW_TILE_TYPE_NONE && !window->has_custom_frame_extents)
 +    return TRUE;
  
    /*
