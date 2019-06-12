@@ -18,7 +18,7 @@
 
 Name:           cinnamon
 Version:        4.0.12
-Release:        202.%{gitdate}git%{shortcommit}%{?dist}
+Release:        203.%{gitdate}git%{shortcommit}%{?dist}
 Summary:        Window management and application launching for GNOME
 License:        GPLv2+ and LGPLv2+
 URL:            https://github.com/linuxmint/%{name}
