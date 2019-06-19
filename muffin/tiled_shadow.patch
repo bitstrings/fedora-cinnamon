@@ -1,15 +1,14 @@
-diff --git a/src/compositor/meta-window-actor.c b/src/compositor/meta-window-actor.c
-index 3e44922..3eea19a 100644
---- a/src/compositor/meta-window-actor.c
-+++ b/src/compositor/meta-window-actor.c
-@@ -969,8 +969,8 @@ meta_window_actor_has_shadow (MetaWindowActor *self)
+--- src/compositor/meta-window-actor.c	2021-06-12 09:05:17.000000000 -0400
++++ src/compositor/meta-window-actor.c.mod	2021-07-05 20:25:06.077445618 -0400
+@@ -972,11 +972,6 @@
+       meta_window_is_fullscreen (priv->window))
+     return FALSE;
  
-   /* Don't shadow tiled windows of any type */
- 
+-  /* Don't shadow tiled windows of any type */
+-
 -  if (meta_window_get_tile_type (priv->window) != META_WINDOW_TILE_TYPE_NONE)
 -    return FALSE;
-+  if (meta_window_get_tile_type (priv->window) != META_WINDOW_TILE_TYPE_NONE && !priv->window->has_custom_frame_extents)
-+    return TRUE;
- 
+-
    /*
     * Always put a shadow around windows with a frame - This should override
+    * the restriction about not putting a shadow around ARGB windows.
