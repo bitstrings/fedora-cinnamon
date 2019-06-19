@@ -1,25 +1,23 @@
-%global gitdate 20190413
-
 Name:          muffin
-Version:       4.0.8
-Release:       204.%{gitdate}git%{?dist}
+Version:       5.0.1
+Release:       105%{?dist}
 Summary:       Window and compositing manager based on Clutter
 
 License:       GPLv2+
 URL:           https://github.com/linuxmint/%{name}
-#Source0:       %{url}/archive/%{version}/%{name}-%{version}.tar.gz
-Source0:       %{url}/archive/master.mint19.tar.gz
+Source0:       %{url}/archive/%{version}/%{name}-%{version}.tar.gz
 Source1:       muffin-adwaita.txt
 
-Patch0:        tiled_shadow.patch
-#Patch0:        upstream.patch
+Patch0: upstream.patch
+Patch1: tiled_shadow.patch
 
+BuildRequires: make
 BuildRequires: desktop-file-utils
 BuildRequires: pkgconfig(gl)
 BuildRequires: pkgconfig(json-glib-1.0)
 BuildRequires: pkgconfig(sm)
 BuildRequires: pkgconfig(libcanberra)
-BuildRequires: pkgconfig(cinnamon-desktop) >= 4.0.0
+BuildRequires: pkgconfig(cinnamon-desktop) >= 5.0.0
 BuildRequires: pkgconfig(gnome-doc-utils)
 BuildRequires: pkgconfig(gobject-introspection-1.0)
 BuildRequires: pkgconfig(xkeyboard-config)
@@ -54,21 +52,29 @@ Header files and libraries for developing Muffin plugins. Also includes
 utilities for testing Metacity/Muffin themes.
 
 %prep
-%autosetup -p1 -n muffin-master.mint19
+#%autosetup -p0
+
+%patch0 -p1
+%patch1 -p0
 
 NOCONFIGURE=1 ./autogen.sh
 
 %build
+# gobject introspection does not work with LTO.  There is an effort to fix this
+# in the appropriate project upstreams, so hopefully LTO can be enabled someday
+# Disable LTO.
+%define _lto_cflags %{nil}
+
 %configure --disable-static \
-           --enable-compile-warnings=minimum \
+           --enable-startup-notification=yes \
+           --disable-silent-rules \
+           --enable-gtk-doc \
+           --disable-clutter-doc \
            --disable-wayland-egl-platform \
            --disable-wayland-egl-server \
            --disable-kms-egl-platform \
            --disable-wayland \
-           --disable-native-backend \
-           --disable-clutter-doc
-
-sed -i -e 's! -shared ! -Wl,--as-needed\0!g' libtool
+           --disable-native-backend
 
 %make_build V=1
 
@@ -124,3 +130,126 @@ desktop-file-install --delete-original \
 %{_mandir}/man1/muffin-*
 
 %changelog
+* Sat Jun 12 2021 Leigh Scott <leigh123linux@gmail.com> - 5.0.1-1
+- Update to 5.0.1 release
+
+* Fri May 28 2021 Leigh Scott <leigh123linux@gmail.com> - 5.0.0-1
+- Update to 5.0.0 release
+
+* Tue Jan 26 2021 Fedora Release Engineering <releng@fedoraproject.org> - 4.8.1-2
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_34_Mass_Rebuild
+
+* Thu Jan 14 2021 Leigh Scott <leigh123linux@gmail.com> - 4.8.1-1
+- Update to 4.8.1 release
+
+* Thu Nov 26 2020 Leigh Scott <leigh123linux@gmail.com> - 4.8.0-1
+- Update to 4.8.0 release
+
+* Tue Aug 11 2020 Leigh Scott <leigh123linux@gmail.com> - 4.6.3-1
+- Update to 4.6.3 release
+
+* Tue Jul 28 2020 Fedora Release Engineering <releng@fedoraproject.org> - 4.6.2-3
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_33_Mass_Rebuild
+
+* Tue Jun 30 2020 Jeff Law <law@redhat.com> - 4.6.2-2
+- Disable LTO
+
+* Sat Jun 06 2020 Leigh Scott <leigh123linux@gmail.com> - 4.6.2-1
+- Update to 4.6.2 release
+
+* Wed May 27 2020 Leigh Scott <leigh123linux@gmail.com> - 4.6.1-1
+- Update to 4.6.1 release
+
+* Wed May 13 2020 Leigh Scott <leigh123linux@gmail.com> - 4.6.0-1
+- Update to 4.6.0 release
+
+* Mon May 11 2020 Leigh Scott <leigh123linux@gmail.com> - 4.4.3-1
+- New upstream release 4.4.3
+
+* Wed Jan 29 2020 Fedora Release Engineering <releng@fedoraproject.org> - 4.4.2-2
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_32_Mass_Rebuild
+
+* Mon Dec 30 2019 Leigh Scott <leigh123linux@googlemail.com> - 4.4.2-1
+- Update to 4.4.2 release
+
+* Fri Nov 22 2019 Leigh Scott <leigh123linux@googlemail.com> - 4.4.1-1
+- Update to 4.4.1 release
+
+* Thu Nov 21 2019 Leigh Scott <leigh123linux@googlemail.com> - 4.4.0-4
+- Add upstream fixes for reverted commits
+
+* Thu Nov 21 2019 Leigh Scott <leigh123linux@googlemail.com> - 4.4.0-3
+- Revert another bad commit
+
+* Thu Nov 21 2019 Leigh Scott <leigh123linux@googlemail.com> - 4.4.0-2
+- Revert bad commit
+
+* Wed Nov 20 2019 Leigh Scott <leigh123linux@googlemail.com> - 4.4.0-1
+- Update to 4.4.0 release
+
+* Tue Oct 01 2019 Leigh Scott <leigh123linux@googlemail.com> - 4.2.2-2
+- Remove --warn-error from gir scannerflags
+
+* Wed Jul 31 2019 Leigh Scott <leigh123linux@googlemail.com> - 4.2.2-1
+- Update to 4.2.2 release
+
+* Thu Jul 25 2019 Fedora Release Engineering <releng@fedoraproject.org> - 4.2.1-2
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_31_Mass_Rebuild
+
+* Sun Jul 14 2019 Leigh Scott <leigh123linux@googlemail.com> - 4.2.1-1
+- Update to 4.2.1 release
+
+* Sat Jul 06 2019 Leigh Scott <leigh123linux@googlemail.com> - 4.2.0-3
+- Revert last commit
+
+* Sat Jul 06 2019 Leigh Scott <leigh123linux@googlemail.com> - 4.2.0-2
+- Add upstream pull request
+
+* Fri Jun 14 2019 Leigh Scott <leigh123linux@googlemail.com> - 4.2.0-1
+- Update to 4.2.0 release
+
+* Wed Jun 12 2019 Leigh Scott <leigh123linux@googlemail.com> - 4.0.8-0.6.20190611git6b11adb
+- Update snapshot
+
+* Wed Jun 05 2019 Leigh Scott <leigh123linux@googlemail.com> - 4.0.8-0.5.20190604git5774eb2
+- Add upstream pull request #514
+
+* Wed Jun 05 2019 Leigh Scott <leigh123linux@googlemail.com> - 4.0.8-0.4.20190604git5774eb2
+- Update snapshot
+
+* Wed Apr 17 2019 Leigh Scott <leigh123linux@googlemail.com> - 4.0.8-0.3.20190417gitc72054b
+- Update snapshot
+
+* Tue Apr 16 2019 Leigh Scott <leigh123linux@googlemail.com> - 4.0.8-0.2.20190416gitb625cfb
+- Update snapshot
+
+* Fri Apr 05 2019 Leigh Scott <leigh123linux@googlemail.com> - 4.0.8-0.1.20190405git462a534
+- Update to git master snapshot
+
+* Wed Apr 03 2019 Leigh Scott <leigh123linux@googlemail.com> - 4.0.7-1
+- Update to 4.0.7 release
+
+* Fri Feb 01 2019 Fedora Release Engineering <releng@fedoraproject.org> - 4.0.6-2
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_30_Mass_Rebuild
+
+* Thu Jan 10 2019 Leigh Scott <leigh123linux@googlemail.com> - 4.0.6-1
+- Update to 4.0.6 release
+
+* Sun Dec 16 2018 Leigh Scott <leigh123linux@googlemail.com> - 4.0.5-1
+- Update to 4.0.5 release
+
+* Thu Dec 06 2018 Leigh Scott <leigh123linux@googlemail.com> - 4.0.4-1
+- Update to 4.0.4 release
+
+* Wed Nov 28 2018 Leigh Scott <leigh123linux@googlemail.com> - 4.0.3-1
+- Update to 4.0.3 release
+
+* Tue Nov 20 2018 Leigh Scott <leigh123linux@googlemail.com> - 4.0.2-1
+- Update to 4.0.2 release
+
+* Mon Nov 12 2018 Leigh Scott <leigh123linux@googlemail.com> - 4.0.1-1
+- Update to 4.0.1 release
+
+* Sat Nov 03 2018 Leigh Scott <leigh123linux@googlemail.com> - 4.0.0-1
+- Update to 4.0.0 release
+- Readd muffin binary, useful for debug only
