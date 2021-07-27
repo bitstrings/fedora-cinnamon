@@ -54,7 +54,7 @@ utilities for testing Metacity/Muffin themes.
 %prep
 #%autosetup -p0
 
-%patch0 -p1
+%patch0 -p2
 %patch1 -p0
 
 NOCONFIGURE=1 ./autogen.sh
