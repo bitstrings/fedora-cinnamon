@@ -1,0 +1,246 @@
+diff --git a/clutter/clutter/clutter-frame-clock.c b/clutter/clutter/clutter-frame-clock.c
+index 16098b70f..480cc4a91 100644
+--- a/clutter/clutter/clutter-frame-clock.c
++++ b/clutter/clutter/clutter-frame-clock.c
+@@ -45,10 +45,7 @@ typedef struct _EstimateQueue
+   int next_index;
+ } EstimateQueue;
+ 
+-/* When heuristic render time is off,
+- * wait 2ms after vblank before starting to draw next frame.
+- */
+-#define SYNC_DELAY_FALLBACK_US ms2us (2)
++#define SYNC_DELAY_FALLBACK_FRACTION 0.875
+ 
+ typedef struct _ClutterFrameListener
+ {
+@@ -320,7 +317,7 @@ clutter_frame_clock_compute_max_render_time_us (ClutterFrameClock *frame_clock)
+   if (!frame_clock->got_measurements_last_frame ||
+       G_UNLIKELY (clutter_paint_debug_flags &
+                   CLUTTER_DEBUG_DISABLE_DYNAMIC_MAX_RENDER_TIME))
+-    return refresh_interval_us - SYNC_DELAY_FALLBACK_US;
++    return refresh_interval_us * SYNC_DELAY_FALLBACK_FRACTION;
+ 
+   for (i = 0; i < ESTIMATE_QUEUE_LENGTH; ++i)
+     {
+@@ -646,13 +643,14 @@ clutter_frame_clock_dispatch (ClutterFrameClock *frame_clock,
+   COGL_TRACE_END (ClutterFrameClockEvents);
+ 
+   COGL_TRACE_BEGIN (ClutterFrameClockTimelines, "Frame Clock (timelines)");
++  if (frame_clock->is_next_presentation_time_valid)
++    time_us = frame_clock->next_presentation_time_us;
+   advance_timelines (frame_clock, time_us);
+   COGL_TRACE_END (ClutterFrameClockTimelines);
+ 
+   COGL_TRACE_BEGIN (ClutterFrameClockFrame, "Frame Clock (frame)");
+   result = frame_clock->listener.iface->frame (frame_clock,
+                                                frame_count,
+-                                               time_us,
+                                                frame_clock->listener.user_data);
+   COGL_TRACE_END (ClutterFrameClockFrame);
+ 
+diff --git a/clutter/clutter/clutter-frame-clock.h b/clutter/clutter/clutter-frame-clock.h
+index e71b54987..91e6b3a13 100644
+--- a/clutter/clutter/clutter-frame-clock.h
++++ b/clutter/clutter/clutter-frame-clock.h
+@@ -50,7 +50,6 @@ typedef struct _ClutterFrameListenerIface
+                          gpointer           user_data);
+   ClutterFrameResult (* frame) (ClutterFrameClock *frame_clock,
+                                 int64_t            frame_count,
+-                                int64_t            time_us,
+                                 gpointer           user_data);
+ } ClutterFrameListenerIface;
+ 
+diff --git a/clutter/clutter/clutter-stage-view.c b/clutter/clutter/clutter-stage-view.c
+index 9b7345983..ea7f57248 100644
+--- a/clutter/clutter/clutter-stage-view.c
++++ b/clutter/clutter/clutter-stage-view.c
+@@ -1146,7 +1146,6 @@ end_frame_timing_measurement (ClutterStageView *view)
+ static ClutterFrameResult
+ handle_frame_clock_frame (ClutterFrameClock *frame_clock,
+                           int64_t            frame_count,
+-                          int64_t            time_us,
+                           gpointer           user_data)
+ {
+   ClutterStageView *view = user_data;
+diff --git a/clutter/clutter/clutter-timeline.c b/clutter/clutter/clutter-timeline.c
+index 0c9fd2c1c..8a73c5005 100644
+--- a/clutter/clutter/clutter-timeline.c
++++ b/clutter/clutter/clutter-timeline.c
+@@ -33,7 +33,7 @@
+  * be used to update the state of the actors.
+  *
+  * It is important to note that #ClutterTimeline is not a generic API for
+- * calling closures after an interval; each Timeline is tied into the master
++ * calling closures after an interval; each Timeline is tied into a frame
+  * clock used to drive the frame cycle. If you need to schedule a closure
+  * after an interval, see clutter_threads_add_timeout() instead.
+  *
+@@ -162,7 +162,7 @@ struct _ClutterTimelinePrivate
+   guint is_playing         : 1;
+ 
+   /* If we've just started playing and haven't yet gotten
+-   * a tick from the master clock
++   * a tick from the frame clock
+    */
+   guint waiting_first_tick : 1;
+   guint auto_reverse       : 1;
+@@ -1880,9 +1880,11 @@ _clutter_timeline_advance (ClutterTimeline *timeline,
+  * @tick_time: time of advance
+  *
+  * Advances @timeline based on the time passed in @tick_time. This
+- * function is called by the master clock. The @timeline will use this
+- * interval to emit the #ClutterTimeline::new-frame signal and
+- * eventually skip frames.
++ * function is called by the frame clock and ideally passes the next
++ * presentation time in which consequences of our timeline will be visible.
++ * Otherwise an estimate using the current monotonic time is also acceptable.
++ * The @timeline will use this interval to emit the #ClutterTimeline::new-frame
++ * signal and eventually skip frames.
+  */
+ void
+ _clutter_timeline_do_tick (ClutterTimeline *timeline,
+diff --git a/src/tests/clutter/conform/frame-clock-timeline.c b/src/tests/clutter/conform/frame-clock-timeline.c
+index 0f9f04d79..fe001b55c 100644
+--- a/src/tests/clutter/conform/frame-clock-timeline.c
++++ b/src/tests/clutter/conform/frame-clock-timeline.c
+@@ -2,11 +2,11 @@
+ #include "tests/clutter-test-utils.h"
+ 
+ static const float refresh_rate = 60.0;
++static const int64_t refresh_interval_us = G_USEC_PER_SEC / refresh_rate;
+ 
+ static ClutterFrameResult
+ timeline_frame_clock_frame (ClutterFrameClock *frame_clock,
+                             int64_t            frame_count,
+-                            int64_t            time_us,
+                             gpointer           user_data)
+ {
+   ClutterFrameInfo frame_info;
+@@ -61,6 +61,8 @@ frame_clock_timeline_basic (void)
+   int frame_counter;
+   int64_t before_us;
+   int64_t after_us;
++  int64_t duration_us;
++  int64_t lateness_us;
+ 
+   main_loop = g_main_loop_new (NULL, FALSE);
+   frame_clock = clutter_frame_clock_new (refresh_rate,
+@@ -97,10 +99,10 @@ frame_clock_timeline_basic (void)
+   g_main_loop_run (main_loop);
+ 
+   after_us = g_get_monotonic_time ();
++  duration_us = after_us - before_us;
++  lateness_us = duration_us - ms2us (clutter_timeline_get_duration (timeline));
+ 
+-  g_assert_cmpint (after_us - before_us,
+-                   >=,
+-                   ms2us (clutter_timeline_get_duration (timeline)));
++  g_assert_cmpint (lateness_us, >, -refresh_interval_us);
+ 
+   g_assert_true (marker1_reached);
+ 
+@@ -140,6 +142,8 @@ frame_clock_timeline_switch (void)
+   int frame_counter;
+   int64_t before_us;
+   int64_t after_us;
++  int64_t duration_us;
++  int64_t lateness_us;
+ 
+   main_loop = g_main_loop_new (NULL, FALSE);
+ 
+@@ -181,10 +185,15 @@ frame_clock_timeline_switch (void)
+   g_main_loop_run (main_loop);
+ 
+   after_us = g_get_monotonic_time ();
++  duration_us = after_us - before_us;
++  lateness_us = duration_us - ms2us (clutter_timeline_get_duration (timeline));
+ 
+-  g_assert_cmpint (after_us - before_us,
+-                   >=,
+-                   ms2us (clutter_timeline_get_duration (timeline)));
++  /* Our threshold is two frames. This is because switching a timeline to a
++   * new clock of the same frequency shifts the phase up to one frame. And
++   * this timeline has seen two different clocks so its overall duration may
++   * be out by almost two frames. But more than two frames is a bug.
++   */
++  g_assert_cmpint (lateness_us, >, -2 * refresh_interval_us);
+ 
+   g_assert (clutter_timeline_get_frame_clock (timeline) == frame_clock2);
+ 
+diff --git a/src/tests/clutter/conform/frame-clock.c b/src/tests/clutter/conform/frame-clock.c
+index 810c39a02..cf118de1b 100644
+--- a/src/tests/clutter/conform/frame-clock.c
++++ b/src/tests/clutter/conform/frame-clock.c
+@@ -92,7 +92,6 @@ fake_hw_clock_new (ClutterFrameClock *frame_clock,
+ static ClutterFrameResult
+ frame_clock_frame (ClutterFrameClock *frame_clock,
+                    int64_t            frame_count,
+-                   int64_t            time_us,
+                    gpointer           user_data)
+ {
+   FrameClockTest *test = user_data;
+@@ -187,7 +186,6 @@ schedule_update_idle (gpointer user_data)
+ static ClutterFrameResult
+ immediate_frame_clock_frame (ClutterFrameClock *frame_clock,
+                              int64_t            frame_count,
+-                             int64_t            time_us,
+                              gpointer           user_data)
+ {
+   GMainLoop *main_loop = user_data;
+@@ -262,7 +260,6 @@ schedule_update_timeout (gpointer user_data)
+ static ClutterFrameResult
+ delayed_damage_frame_clock_frame (ClutterFrameClock *frame_clock,
+                                   int64_t            frame_count,
+-                                  int64_t            time_us,
+                                   gpointer           user_data)
+ {
+   FrameClockTest *test = user_data;
+@@ -336,7 +333,6 @@ frame_clock_delayed_damage (void)
+ static ClutterFrameResult
+ no_damage_frame_clock_frame (ClutterFrameClock *frame_clock,
+                              int64_t            frame_count,
+-                             int64_t            time_us,
+                              gpointer           user_data)
+ {
+   g_assert_not_reached ();
+@@ -390,7 +386,6 @@ typedef struct _UpdateNowFrameClockTest
+ static ClutterFrameResult
+ update_now_frame_clock_frame (ClutterFrameClock *frame_clock,
+                               int64_t            frame_count,
+-                              int64_t            time_us,
+                               gpointer           user_data)
+ {
+   UpdateNowFrameClockTest *test = user_data;
+@@ -497,7 +492,6 @@ before_frame_frame_clock_before_frame (ClutterFrameClock *frame_clock,
+ static ClutterFrameResult
+ before_frame_frame_clock_frame (ClutterFrameClock *frame_clock,
+                                 int64_t            frame_count,
+-                                int64_t            time_us,
+                                 gpointer           user_data)
+ {
+   int64_t *expected_frame_count = user_data;
+@@ -567,7 +561,6 @@ typedef struct _InhibitTest
+ static ClutterFrameResult
+ inhibit_frame_clock_frame (ClutterFrameClock *frame_clock,
+                            int64_t            frame_count,
+-                           int64_t            time_us,
+                            gpointer           user_data)
+ {
+   InhibitTest *test = user_data;
+@@ -645,7 +638,6 @@ typedef struct _RescheduleOnIdleFrameClockTest
+ static ClutterFrameResult
+ reschedule_on_idle_clock_frame (ClutterFrameClock *frame_clock,
+                                 int64_t            frame_count,
+-                                int64_t            time_us,
+                                 gpointer           user_data)
+ {
+   RescheduleOnIdleFrameClockTest *test = user_data;
+@@ -773,7 +765,6 @@ notify_ready_and_schedule_update_idle (gpointer user_data)
+ static ClutterFrameResult
+ frame_clock_ready_frame (ClutterFrameClock *frame_clock,
+                          int64_t            frame_count,
+-                         int64_t            time_us,
+                          gpointer           user_data)
+ {
+   GMainLoop *main_loop = user_data;

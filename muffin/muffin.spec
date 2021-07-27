@@ -1,6 +1,6 @@
 Name:          muffin
-Version:       5.0.1
-Release:       105%{?dist}
+Version:       5.2.0
+Release:       101%{?dist}
 Summary:       Window and compositing manager based on Clutter
 
 License:       GPLv2+
@@ -8,8 +8,8 @@ URL:           https://github.com/linuxmint/%{name}
 Source0:       %{url}/archive/%{version}/%{name}-%{version}.tar.gz
 Source1:       muffin-adwaita.txt
 
-Patch0: upstream.patch
-Patch1: tiled_shadow.patch
+Patch0: tiled_shadow.patch
+Patch1: upstream.patch
 
 BuildRequires: make
 BuildRequires: desktop-file-utils
@@ -52,10 +52,9 @@ Header files and libraries for developing Muffin plugins. Also includes
 utilities for testing Metacity/Muffin themes.
 
 %prep
-#%autosetup -p0
-
-%patch0 -p2
-%patch1 -p0
+%setup -q
+%patch0 -p0
+%patch1 -p1
 
 NOCONFIGURE=1 ./autogen.sh
 

@@ -1,0 +1,925 @@
+diff --git a/src/st/croco/cr-cascade.c b/src/st/croco/cr-cascade.c
+index 68f59bb2dab23f6da4e8cc9c8c6020727d7debe2..519aff599c4a1799688a6b764666b3ae19a152dc 100644
+--- a/src/st/croco/cr-cascade.c
++++ b/src/st/croco/cr-cascade.c
+@@ -80,6 +80,7 @@ cr_cascade_new (CRStyleSheet * a_author_sheet,
+                 return NULL;
+         }
+         memset (PRIVATE (result), 0, sizeof (CRCascadePriv));
++        PRIVATE (result)->ref_count = 1;
+ 
+         if (a_author_sheet) {
+                 cr_cascade_set_sheet (result, a_author_sheet, ORIGIN_AUTHOR);
+@@ -178,8 +179,9 @@ cr_cascade_unref (CRCascade * a_this)
+ {
+         g_return_if_fail (a_this && PRIVATE (a_this));
+ 
+-        if (PRIVATE (a_this)->ref_count)
+-                PRIVATE (a_this)->ref_count--;
++        g_assert (PRIVATE (a_this)->ref_count > 0);
++        PRIVATE (a_this)->ref_count--;
++
+         if (!PRIVATE (a_this)->ref_count) {
+                 cr_cascade_destroy (a_this);
+         }
+diff --git a/src/st/croco/cr-declaration.c b/src/st/croco/cr-declaration.c
+index bf1bcc1cd02db3ffd9ef3cf0e791803f19552dbc..0e2a7b62f5326bedbbe27eee40c4af6d7541d95f 100644
+--- a/src/st/croco/cr-declaration.c
++++ b/src/st/croco/cr-declaration.c
+@@ -94,6 +94,7 @@ cr_declaration_new (CRStatement * a_statement,
+         memset (result, 0, sizeof (CRDeclaration));
+         result->property = a_property;
+         result->value = a_value;
++        result->ref_count = 1;
+ 
+         if (a_value) {
+                 cr_term_ref (a_value);
+@@ -145,7 +146,7 @@ cr_declaration_parse_from_buf (CRStatement * a_statement,
+         result = cr_declaration_new (a_statement, property, value);
+         if (result) {
+                 property = NULL;
+-                value = NULL;
++                g_clear_pointer (&value, cr_term_unref);
+                 result->important = important;
+         }
+ 
+@@ -216,7 +217,7 @@ cr_declaration_parse_list_from_buf (const guchar * a_str,
+         result = cr_declaration_new (NULL, property, value);
+         if (result) {
+                 property = NULL;
+-                value = NULL;
++                g_clear_pointer (&value, cr_term_unref);
+                 result->important = important;
+         }
+         /*now, go parse the other declarations */
+@@ -248,10 +249,9 @@ cr_declaration_parse_list_from_buf (const guchar * a_str,
+                 cur_decl = cr_declaration_new (NULL, property, value);
+                 if (cur_decl) {
+                         cur_decl->important = important;
+-                        result = cr_declaration_append (result, cur_decl);
++                        result = cr_declaration_append (result, g_steal_pointer (&cur_decl));
++                        g_clear_pointer (&value, cr_term_unref);
+                         property = NULL;
+-                        value = NULL;
+-                        cur_decl = NULL;
+                 } else {
+                         break;
+                 }
+@@ -748,9 +748,8 @@ cr_declaration_unref (CRDeclaration * a_this)
+ {
+         g_return_val_if_fail (a_this, FALSE);
+ 
+-        if (a_this->ref_count) {
+-                a_this->ref_count--;
+-        }
++        g_assert (a_this->ref_count > 0);
++        a_this->ref_count--;
+ 
+         if (a_this->ref_count == 0) {
+                 cr_declaration_destroy (a_this);
+diff --git a/src/st/croco/cr-doc-handler.c b/src/st/croco/cr-doc-handler.c
+index b0ef13c0726cda836222454dc13373088b9b193a..94246469d7e4d16cc90bb8b40d0e6ca43288d33c 100644
+--- a/src/st/croco/cr-doc-handler.c
++++ b/src/st/croco/cr-doc-handler.c
+@@ -228,9 +228,8 @@ cr_doc_handler_unref (CRDocHandler * a_this)
+ {
+         g_return_val_if_fail (a_this, FALSE);
+ 
+-        if (a_this->ref_count > 0) {
+-                a_this->ref_count--;
+-        }
++        g_assert (a_this->ref_count > 0);
++        a_this->ref_count--;
+ 
+         if (a_this->ref_count == 0) {
+                 cr_doc_handler_destroy (a_this);
+diff --git a/src/st/croco/cr-input.c b/src/st/croco/cr-input.c
+index 430e75ed8d0bbb471f92a48805784016cdb74b9c..b6364706758fb88ea40c53f6546f8949d2429f7c 100644
+--- a/src/st/croco/cr-input.c
++++ b/src/st/croco/cr-input.c
+@@ -104,6 +104,7 @@ cr_input_new_real (void)
+                 return NULL;
+         }
+         memset (PRIVATE (result), 0, sizeof (CRInputPriv));
++        PRIVATE (result)->ref_count = 1;
+         PRIVATE (result)->free_in_buf = TRUE;
+         return result;
+ }
+@@ -328,9 +329,8 @@ cr_input_unref (CRInput * a_this)
+ {
+         g_return_val_if_fail (a_this && PRIVATE (a_this), FALSE);
+ 
+-        if (PRIVATE (a_this)->ref_count) {
+-                PRIVATE (a_this)->ref_count--;
+-        }
++        g_assert (PRIVATE(a_this)->ref_count > 0);
++        PRIVATE(a_this)->ref_count--;
+ 
+         if (PRIVATE (a_this)->ref_count == 0) {
+                 cr_input_destroy (a_this);
+diff --git a/src/st/croco/cr-om-parser.c b/src/st/croco/cr-om-parser.c
+index 90f710621911bf9b41e69759786a69afa7cf6d25..ba000a570a85c58cc9709e6bbb572632d52fed08 100644
+--- a/src/st/croco/cr-om-parser.c
++++ b/src/st/croco/cr-om-parser.c
+@@ -1062,13 +1062,12 @@ cr_om_parser_parse_paths_to_cascade (CROMParser * a_this,
+                 }
+         }
+         result = cr_cascade_new (sheets[0], sheets[1], sheets[2]);
+-        if (!result) {
+-                for (i = 0; i < 3; i++) {
+-                        cr_stylesheet_unref (sheets[i]);
+-                        sheets[i] = 0;
+-                }
++        for (i = 0; i < 3; i++)
++                g_clear_pointer (&sheets[i], cr_stylesheet_unref);
++
++        if (!result)
+                 return CR_ERROR;
+-        }
++
+         *a_result = result;
+         return CR_OK;
+ }
+diff --git a/src/st/croco/cr-parser.c b/src/st/croco/cr-parser.c
+index d4f40cf1deb451285245bd7d7607147bc4207c0a..ab6b95a1853a7de18b1842e2d32cfa6c121933e0 100644
+--- a/src/st/croco/cr-parser.c
++++ b/src/st/croco/cr-parser.c
+@@ -1617,9 +1617,7 @@ cr_parser_parse_term (CRParser * a_this, CRTerm ** a_term)
+         }
+         cr_parsing_location_copy (&result->location,
+                                   &location) ;
+-        *a_term = cr_term_append_term (*a_term, result);
+-
+-        result = NULL;
++        *a_term = cr_term_append_term (*a_term, g_steal_pointer (&result));
+ 
+         cr_parser_try_to_skip_spaces_and_comments (a_this);
+ 
+@@ -2808,11 +2806,11 @@ cr_parser_new_from_buf (guchar * a_buf,
+         g_return_val_if_fail (input, NULL);
+ 
+         result = cr_parser_new_from_input (input);
+-        if (!result) {
+-                cr_input_destroy (input);
+-                input = NULL;
++        cr_input_unref (input);
++
++        if (!result)
+                 return NULL;
+-        }
++
+         return result;
+ }
+ 
+@@ -2834,6 +2832,7 @@ cr_parser_new_from_input (CRInput * a_input)
+         }
+ 
+         result = cr_parser_new (tokenizer);
++        cr_tknzr_unref (tokenizer);
+         g_return_val_if_fail (result, NULL);
+ 
+         return result;
+@@ -2859,6 +2858,7 @@ cr_parser_new_from_file (const guchar * a_file_uri, enum CREncoding a_enc)
+         }
+ 
+         result = cr_parser_new (tokenizer);
++        cr_tknzr_unref (tokenizer);
+         g_return_val_if_fail (result, NULL);
+         return result;
+ }
+@@ -3001,6 +3001,7 @@ cr_parser_parse_file (CRParser * a_this,
+         g_return_val_if_fail (tknzr != NULL, CR_ERROR);
+ 
+         status = cr_parser_set_tknzr (a_this, tknzr);
++        cr_tknzr_unref (tknzr);
+         g_return_val_if_fail (status == CR_OK, CR_ERROR);
+ 
+         status = cr_parser_parse (a_this);
+@@ -3367,14 +3368,6 @@ cr_parser_parse_ruleset (CRParser * a_this)
+ 
+         if (PRIVATE (a_this)->sac_handler
+             && PRIVATE (a_this)->sac_handler->start_selector) {
+-                /*
+-                 *the selector is ref counted so that the parser's user
+-                 *can choose to keep it.
+-                 */
+-                if (selector) {
+-                        cr_selector_ref (selector);
+-                }
+-
+                 PRIVATE (a_this)->sac_handler->start_selector
+                         (PRIVATE (a_this)->sac_handler, selector);
+                 start_selector = TRUE;
+@@ -3387,9 +3380,6 @@ cr_parser_parse_ruleset (CRParser * a_this)
+         status = cr_parser_parse_declaration (a_this, &property,
+                                               &expr,
+                                               &is_important);
+-        if (expr) {
+-                cr_term_ref (expr);
+-        }
+         if (status == CR_OK
+             && PRIVATE (a_this)->sac_handler
+             && PRIVATE (a_this)->sac_handler->property) {
+@@ -3442,9 +3432,6 @@ cr_parser_parse_ruleset (CRParser * a_this)
+                 status = cr_parser_parse_declaration (a_this, &property,
+                                                       &expr, &is_important);
+ 
+-                if (expr) {
+-                        cr_term_ref (expr);
+-                }
+                 if (status == CR_OK
+                     && PRIVATE (a_this)->sac_handler
+                     && PRIVATE (a_this)->sac_handler->property) {
+@@ -3980,9 +3967,6 @@ cr_parser_parse_page (CRParser * a_this)
+          */
+         if (PRIVATE (a_this)->sac_handler
+             && PRIVATE (a_this)->sac_handler->property) {
+-                if (css_expression)
+-                        cr_term_ref (css_expression);
+-
+                 PRIVATE (a_this)->sac_handler->property
+                         (PRIVATE (a_this)->sac_handler,
+                          property, css_expression, important);
+@@ -4034,7 +4018,6 @@ cr_parser_parse_page (CRParser * a_this)
+                  */
+                 if (PRIVATE (a_this)->sac_handler
+                     && PRIVATE (a_this)->sac_handler->property) {
+-                        cr_term_ref (css_expression);
+                         PRIVATE (a_this)->sac_handler->property
+                                 (PRIVATE (a_this)->sac_handler,
+                                  property, css_expression, important);
+@@ -4281,7 +4264,6 @@ cr_parser_parse_font_face (CRParser * a_this)
+                 /*
+                  *here, call the relevant SAC handler.
+                  */
+-                cr_term_ref (css_expression);
+                 if (PRIVATE (a_this)->sac_handler &&
+                     PRIVATE (a_this)->sac_handler->property) {
+                         PRIVATE (a_this)->sac_handler->property
+@@ -4316,7 +4298,6 @@ cr_parser_parse_font_face (CRParser * a_this)
+                 /*
+                  *here, call the relevant SAC handler.
+                  */
+-                cr_term_ref (css_expression);
+                 if (PRIVATE (a_this)->sac_handler->property) {
+                         PRIVATE (a_this)->sac_handler->property
+                                 (PRIVATE (a_this)->sac_handler,
+@@ -4492,6 +4473,7 @@ cr_parser_parse_buf (CRParser * a_this,
+         g_return_val_if_fail (tknzr != NULL, CR_ERROR);
+ 
+         status = cr_parser_set_tknzr (a_this, tknzr);
++        cr_tknzr_unref (tknzr);
+         g_return_val_if_fail (status == CR_OK, CR_ERROR);
+ 
+         status = cr_parser_parse (a_this);
+diff --git a/src/st/croco/cr-selector.c b/src/st/croco/cr-selector.c
+index 8902e1c0f1f07a1e09d552a3b38927382e416164..de3e1ac581aa4b8ab3f631fee05a045477902b29 100644
+--- a/src/st/croco/cr-selector.c
++++ b/src/st/croco/cr-selector.c
+@@ -47,6 +47,7 @@ cr_selector_new (CRSimpleSel * a_simple_sel)
+         }
+         memset (result, 0, sizeof (CRSelector));
+         result->simple_sel = a_simple_sel;
++        result->ref_count = 1;
+         return result;
+ }
+ 
+@@ -134,7 +135,7 @@ cr_selector_append_simple_sel (CRSelector * a_this,
+         selector = cr_selector_new (a_simple_sel);
+         g_return_val_if_fail (selector, NULL);
+ 
+-        return cr_selector_append (a_this, selector);
++        return cr_selector_append (a_this, g_steal_pointer (&selector));
+ }
+ 
+ guchar *
+@@ -236,9 +237,8 @@ cr_selector_unref (CRSelector * a_this)
+ {
+         g_return_val_if_fail (a_this, FALSE);
+ 
+-        if (a_this->ref_count) {
+-                a_this->ref_count--;
+-        }
++        g_assert (a_this->ref_count > 0);
++        a_this->ref_count--;
+ 
+         if (a_this->ref_count == 0) {
+                 cr_selector_destroy (a_this);
+diff --git a/src/st/croco/cr-statement.c b/src/st/croco/cr-statement.c
+index 376617c60cb28eb7416e94783645495b51b4dc87..8759af7a361c2559686f35444d9fdc190f5fc398 100644
+--- a/src/st/croco/cr-statement.c
++++ b/src/st/croco/cr-statement.c
+@@ -204,7 +204,8 @@ parse_page_property_cb (CRDocHandler * a_this,
+         g_return_if_fail (decl);
+         decl->important = a_important;
+         stmt->kind.page_rule->decl_list =
+-                cr_declaration_append (stmt->kind.page_rule->decl_list, decl);
++                cr_declaration_append (stmt->kind.page_rule->decl_list,
++                                       g_steal_pointer (&decl));
+         g_return_if_fail (stmt->kind.page_rule->decl_list);
+ }
+ 
+diff --git a/src/st/croco/cr-stylesheet.c b/src/st/croco/cr-stylesheet.c
+index 69909da245caa33517ce460ab7eda813f661d8a7..e119067d52e520eba7a151fc22650e86e4c029c4 100644
+--- a/src/st/croco/cr-stylesheet.c
++++ b/src/st/croco/cr-stylesheet.c
+@@ -28,6 +28,27 @@
+  *The definition of the #CRStyleSheet class
+  */
+ 
++struct _CRStyleSheetPriv {
++        /**
++         *the reference count of this instance of #CRStyleSheet.
++         *It can be manipulated with cr_stylesheet_ref() and
++         *cr_stylesheet_unref()
++        */
++        gulong ref_count;
++
++        /**
++         *custom application data pointer
++         *Can be used by applications.
++         *libcroco itself will handle its destruction
++         *if app_data_destroy_func is set via
++         *cr_stylesheet_set_app_data().
++         */
++        gpointer app_data;
++        GDestroyNotify app_data_destroy_func;
++};
++
++#define PRIVATE(obj) ((obj)->priv)
++
+ /**
+  *Constructor of the #CRStyleSheet class.
+  *@param the initial list of css statements.
+@@ -49,6 +70,15 @@ cr_stylesheet_new (CRStatement * a_stmts)
+         if (a_stmts)
+                 result->statements = a_stmts;
+ 
++        PRIVATE (result) = g_try_malloc (sizeof (CRStyleSheetPriv));
++        if (!PRIVATE (result)) {
++                cr_utils_trace_info ("Out of memory");
++                g_free (result);
++                return NULL;
++        }
++        memset (PRIVATE (result), 0, sizeof (CRStyleSheetPriv));
++        PRIVATE (result)->ref_count = 1;
++
+         return result;
+ }
+ 
+@@ -137,23 +167,25 @@ cr_stylesheet_statement_get_from_list (CRStyleSheet * a_this, int itemnr)
+         return cr_statement_get_from_list (a_this->statements, itemnr);
+ }
+ 
+-void
++CRStyleSheet *
+ cr_stylesheet_ref (CRStyleSheet * a_this)
+ {
+-        g_return_if_fail (a_this);
++        g_return_val_if_fail (a_this && PRIVATE (a_this), NULL);
++
++        PRIVATE (a_this)->ref_count++;
+ 
+-        a_this->ref_count++;
++        return a_this;
+ }
+ 
+ gboolean
+ cr_stylesheet_unref (CRStyleSheet * a_this)
+ {
+-        g_return_val_if_fail (a_this, FALSE);
++        g_return_val_if_fail (a_this && PRIVATE (a_this), FALSE);
+ 
+-        if (a_this->ref_count)
+-                a_this->ref_count--;
++        g_assert (PRIVATE (a_this)->ref_count > 0);
++        PRIVATE (a_this)->ref_count--;
+ 
+-        if (!a_this->ref_count) {
++        if (!PRIVATE (a_this)->ref_count) {
+                 cr_stylesheet_destroy (a_this);
+                 return TRUE;
+         }
+@@ -161,6 +193,15 @@ cr_stylesheet_unref (CRStyleSheet * a_this)
+         return FALSE;
+ }
+ 
++static void
++cleanup_app_data (CRStyleSheetPriv * priv)
++{
++        if (priv->app_data_destroy_func) {
++                g_clear_pointer (&priv->app_data, priv->app_data_destroy_func);
++                priv->app_data_destroy_func = NULL;
++        }
++}
++
+ /**
+  *Destructor of the #CRStyleSheet class.
+  *@param a_this the current instance of the #CRStyleSheet class.
+@@ -174,5 +215,34 @@ cr_stylesheet_destroy (CRStyleSheet * a_this)
+                 cr_statement_destroy (a_this->statements);
+                 a_this->statements = NULL;
+         }
++        if (PRIVATE (a_this)) {
++                cleanup_app_data (PRIVATE (a_this));
++                g_free (PRIVATE (a_this));
++                PRIVATE (a_this) = NULL;
++        }
+         g_free (a_this);
+ }
++
++void
++cr_stylesheet_set_app_data (CRStyleSheet   * a_this,
++                            gpointer         app_data,
++                            GDestroyNotify   app_data_destroy_func)
++{
++        CRStyleSheetPriv * priv;
++
++        g_return_if_fail (a_this && PRIVATE (a_this));
++
++        priv = PRIVATE (a_this);
++        cleanup_app_data (priv);
++
++        priv->app_data = app_data;
++        priv->app_data_destroy_func = app_data_destroy_func;
++}
++
++gpointer
++cr_stylesheet_get_app_data (CRStyleSheet *a_this)
++{
++        g_return_val_if_fail (a_this && PRIVATE (a_this), NULL);
++
++        return PRIVATE (a_this)->app_data;
++}
+diff --git a/src/st/croco/cr-stylesheet.h b/src/st/croco/cr-stylesheet.h
+index 2d6b4fa0f68faee6d35196cffa100cdecb083818..92dd7b7cac033f8319bd714196f00181dc136fdd 100644
+--- a/src/st/croco/cr-stylesheet.h
++++ b/src/st/croco/cr-stylesheet.h
+@@ -34,6 +34,7 @@ G_BEGIN_DECLS
+  *The declaration of the #CRStyleSheet class.
+  */
+ 
++typedef struct _CRStyleSheetPriv CRStyleSheetPriv;
+ 
+ enum CRStyleOrigin
+ {
+@@ -56,6 +57,8 @@ enum CRStyleOrigin
+  */
+ struct _CRStyleSheet
+ {
++        CRStyleSheetPriv *priv;
++
+ 	/**The css statements list*/
+ 	CRStatement *statements ;
+ 
+@@ -66,20 +69,6 @@ struct _CRStyleSheet
+ 
+ 	/**custom data used by libcroco*/
+ 	gpointer croco_data ;
+-
+-	/**
+-	 *custom application data pointer
+-	 *Can be used by applications.
+-	 */
+-	gpointer app_data ;
+-
+-	/**
+-	 *the reference count of this instance
+-	 *Please, don't never ever modify it
+-	 *directly. Use cr_stylesheet_ref()
+-	 *and cr_stylesheet_unref() instead.
+-	 */
+-	gulong ref_count ;
+ } ;
+ 
+ CRStyleSheet * cr_stylesheet_new (CRStatement *a_stmts) ;
+@@ -91,12 +80,17 @@ gint cr_stylesheet_nr_rules (CRStyleSheet const *a_this) ;
+ 
+ CRStatement * cr_stylesheet_statement_get_from_list (CRStyleSheet *a_this, int itemnr) ;
+ 
+-void cr_stylesheet_ref (CRStyleSheet *a_this) ;
++CRStyleSheet * cr_stylesheet_ref (CRStyleSheet *a_this) ;
+ 
+ gboolean cr_stylesheet_unref (CRStyleSheet *a_this) ;
+ 
+ void cr_stylesheet_destroy (CRStyleSheet *a_this) ;
+ 
++void cr_stylesheet_set_app_data (CRStyleSheet *a_this, gpointer app_data, GDestroyNotify app_data_destroy_func);
++gpointer cr_stylesheet_get_app_data (CRStyleSheet *a_this);
++
++G_DEFINE_AUTOPTR_CLEANUP_FUNC (CRStyleSheet, cr_stylesheet_ref);
++
+ G_END_DECLS
+ 
+ #endif /*__CR_STYLESHEET_H__*/
+diff --git a/src/st/croco/cr-term.c b/src/st/croco/cr-term.c
+index 4235241938d3d4d79a5540d80b6f0d5666f73f5b..0a26803c59404ca438cd9b935df743efafc6f7eb 100644
+--- a/src/st/croco/cr-term.c
++++ b/src/st/croco/cr-term.c
+@@ -92,6 +92,7 @@ cr_term_new (void)
+                 return NULL;
+         }
+         memset (result, 0, sizeof (CRTerm));
++        result->ref_count = 1;
+         return result;
+ }
+ 
+@@ -752,9 +753,8 @@ cr_term_unref (CRTerm * a_this)
+ {
+         g_return_val_if_fail (a_this, FALSE);
+ 
+-        if (a_this->ref_count) {
+-                a_this->ref_count--;
+-        }
++        g_assert (a_this->ref_count > 0);
++        a_this->ref_count--;
+ 
+         if (a_this->ref_count == 0) {
+                 cr_term_destroy (a_this);
+diff --git a/src/st/croco/cr-tknzr.c b/src/st/croco/cr-tknzr.c
+index 54f18f270c7521f2e1114e4a81fd8f355502db3c..b78a6f135cb31926a725b9590a34b4a6ac059415 100644
+--- a/src/st/croco/cr-tknzr.c
++++ b/src/st/croco/cr-tknzr.c
+@@ -1618,6 +1618,7 @@ cr_tknzr_new (CRInput * a_input)
+                 return NULL;
+         }
+         memset (result->priv, 0, sizeof (CRTknzrPriv));
++        result->priv->ref_count = 1;
+         if (a_input)
+                 cr_tknzr_set_input (result, a_input);
+         return result;
+@@ -1637,6 +1638,7 @@ cr_tknzr_new_from_buf (guchar * a_buf, gulong a_len,
+         g_return_val_if_fail (input != NULL, NULL);
+ 
+         result = cr_tknzr_new (input);
++        cr_input_unref (input);
+ 
+         return result;
+ }
+@@ -1652,6 +1654,7 @@ cr_tknzr_new_from_uri (const guchar * a_file_uri,
+         g_return_val_if_fail (input != NULL, NULL);
+ 
+         result = cr_tknzr_new (input);
++        cr_input_unref (input);
+ 
+         return result;
+ }
+@@ -1669,9 +1672,8 @@ cr_tknzr_unref (CRTknzr * a_this)
+ {
+         g_return_val_if_fail (a_this && PRIVATE (a_this), FALSE);
+ 
+-        if (PRIVATE (a_this)->ref_count > 0) {
+-                PRIVATE (a_this)->ref_count--;
+-        }
++        g_assert (PRIVATE (a_this)->ref_count > 0);
++        PRIVATE (a_this)->ref_count--;
+ 
+         if (PRIVATE (a_this)->ref_count == 0) {
+                 cr_tknzr_destroy (a_this);
+diff --git a/src/st/st-theme.c b/src/st/st-theme.c
+index 20d42fd3348ce1eeaf86454557ca7228312b68cb..2348c9431a0f112b1f0d6f343bf1e3c4670dc5a1 100644
+--- a/src/st/st-theme.c
++++ b/src/st/st-theme.c
+@@ -64,14 +64,25 @@ struct _StTheme
+   GFile *application_stylesheet;
+   GFile *default_stylesheet;
+   GFile *theme_stylesheet;
+-  GSList *custom_stylesheets;
+ 
+   GHashTable *stylesheets_by_file;
+-  GHashTable *files_by_stylesheet;
+ 
+   CRCascade *cascade;
+ };
+ 
++typedef struct _StyleSheetData
++{
++  GFile *file;
++  gboolean extension_stylesheet;
++} StyleSheetData;
++
++static void
++stylesheet_data_free (StyleSheetData *stylesheet_data)
++{
++  g_clear_object (&stylesheet_data->file);
++  g_free (stylesheet_data);
++}
++
+ enum
+ {
+   PROP_0,
+@@ -110,9 +121,10 @@ file_equal0 (GFile *file1,
+ static void
+ st_theme_init (StTheme *theme)
+ {
+-  theme->stylesheets_by_file = g_hash_table_new_full (g_file_hash, (GEqualFunc) g_file_equal,
+-                                                      (GDestroyNotify)g_object_unref, (GDestroyNotify)cr_stylesheet_unref);
+-  theme->files_by_stylesheet = g_hash_table_new (g_direct_hash, g_direct_equal);
++  theme->stylesheets_by_file =
++    g_hash_table_new_full (g_file_hash, (GEqualFunc) g_file_equal,
++                           (GDestroyNotify) g_object_unref,
++                           (GDestroyNotify) cr_stylesheet_unref);
+ }
+ 
+ static void
+@@ -182,7 +194,7 @@ parse_stylesheet (GFile   *file,
+ {
+   enum CRStatus status;
+   CRStyleSheet *stylesheet;
+-  char *contents;
++  g_autofree char *contents = NULL;
+   gsize length;
+ 
+   if (file == NULL)
+@@ -195,20 +207,14 @@ parse_stylesheet (GFile   *file,
+                                           length,
+                                           CR_UTF_8,
+                                           &stylesheet);
+-  g_free (contents);
+-
+   if (status != CR_OK)
+     {
+-      char *uri = g_file_get_uri (file);
++      g_autofree char *uri = g_file_get_uri (file);
+       g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
+                    "Error parsing stylesheet '%s'; errcode:%d", uri, status);
+-      g_free (uri);
+       return NULL;
+     }
+ 
+-  /* Extension stylesheet */
+-  stylesheet->app_data = GUINT_TO_POINTER (FALSE);
+-
+   return stylesheet;
+ }
+ 
+@@ -235,19 +241,28 @@ parse_stylesheet_nofail (GFile *file)
+   return result;
+ }
+ 
+-static void
++static gboolean
+ insert_stylesheet (StTheme      *theme,
+                    GFile        *file,
+                    CRStyleSheet *stylesheet)
+ {
++  StyleSheetData *stylesheet_data;
++
+   if (stylesheet == NULL)
+-    return;
++    return FALSE;
+ 
+-  g_object_ref (file);
+-  cr_stylesheet_ref (stylesheet);
++  if (g_hash_table_contains (theme->stylesheets_by_file, file))
++    return FALSE;
+ 
+-  g_hash_table_insert (theme->stylesheets_by_file, file, stylesheet);
+-  g_hash_table_insert (theme->files_by_stylesheet, stylesheet, file);
++  stylesheet_data = g_new0 (StyleSheetData, 1);
++  stylesheet_data->file = g_object_ref (file);
++
++  cr_stylesheet_set_app_data (stylesheet, stylesheet_data,
++                              (GDestroyNotify) stylesheet_data_free);
++
++  g_hash_table_insert (theme->stylesheets_by_file,
++                       g_object_ref (file), cr_stylesheet_ref (stylesheet));
++  return TRUE;
+ }
+ 
+ /**
+@@ -265,17 +280,16 @@ st_theme_load_stylesheet (StTheme    *theme,
+                           GFile      *file,
+                           GError    **error)
+ {
+-  CRStyleSheet *stylesheet;
++  g_autoptr(CRStyleSheet) stylesheet = NULL;
++  StyleSheetData *stylesheet_data;
+ 
+   stylesheet = parse_stylesheet (file, error);
+-  if (!stylesheet)
++  if (!insert_stylesheet (theme, file, stylesheet))
+     return FALSE;
+ 
+-  stylesheet->app_data = GUINT_TO_POINTER (TRUE);
++  stylesheet_data = cr_stylesheet_get_app_data (stylesheet);
++  stylesheet_data->extension_stylesheet = TRUE;
+ 
+-  insert_stylesheet (theme, file, stylesheet);
+-  cr_stylesheet_ref (stylesheet);
+-  theme->custom_stylesheets = g_slist_prepend (theme->custom_stylesheets, stylesheet);
+   g_signal_emit (theme, signals[STYLESHEETS_CHANGED], 0);
+ 
+   return TRUE;
+@@ -294,24 +308,23 @@ st_theme_unload_stylesheet (StTheme    *theme,
+                             GFile      *file)
+ {
+   CRStyleSheet *stylesheet;
++  StyleSheetData *stylesheet_data;
+ 
+   stylesheet = g_hash_table_lookup (theme->stylesheets_by_file, file);
+   if (!stylesheet)
+     return;
+ 
+-  if (!g_slist_find (theme->custom_stylesheets, stylesheet))
++  stylesheet_data = cr_stylesheet_get_app_data (stylesheet);
++  if (!stylesheet_data || !stylesheet_data->extension_stylesheet)
+     return;
+ 
+-  theme->custom_stylesheets = g_slist_remove (theme->custom_stylesheets, stylesheet);
+-
+-  g_signal_emit (theme, signals[STYLESHEETS_CHANGED], 0);
+-
+-  /* We need to remove the entry from the hashtable after emitting the signal
+-   * since we might still access the files_by_stylesheet hashtable in
+-   * _st_theme_resolve_url() during the signal emission.
++  /* We need to keep a reference while emitting the signal since we might
++   * still access the stylesheet in _st_theme_resolve_url() during the signal
++   * emission.
+    */
++  cr_stylesheet_ref (stylesheet);
+   g_hash_table_remove (theme->stylesheets_by_file, file);
+-  g_hash_table_remove (theme->files_by_stylesheet, stylesheet);
++  g_signal_emit (theme, signals[STYLESHEETS_CHANGED], 0);
+   cr_stylesheet_unref (stylesheet);
+ }
+ 
+@@ -328,14 +341,18 @@ GSList*
+ st_theme_get_custom_stylesheets (StTheme *theme)
+ {
+   GSList *result = NULL;
+-  GSList *iter;
++  GHashTableIter iter;
++  gpointer value;
++
++  g_hash_table_iter_init (&iter, theme->stylesheets_by_file);
+ 
+-  for (iter = theme->custom_stylesheets; iter; iter = iter->next)
++  while (g_hash_table_iter_next (&iter, NULL, &value))
+     {
+-      CRStyleSheet *stylesheet = iter->data;
+-      GFile *file = g_hash_table_lookup (theme->files_by_stylesheet, stylesheet);
++      CRStyleSheet *stylesheet = value;
++      StyleSheetData *stylesheet_data = cr_stylesheet_get_app_data (stylesheet);
+ 
+-      result = g_slist_prepend (result, g_object_ref (file));
++      if (stylesheet_data && stylesheet_data->extension_stylesheet)
++        result = g_slist_prepend (result, g_object_ref (stylesheet_data->file));
+     }
+ 
+   return result;
+@@ -345,9 +362,9 @@ static void
+ st_theme_constructed (GObject *object)
+ {
+   StTheme *theme = ST_THEME (object);
+-  CRStyleSheet *application_stylesheet;
+-  CRStyleSheet *theme_stylesheet;
+-  CRStyleSheet *default_stylesheet;
++  g_autoptr(CRStyleSheet) application_stylesheet = NULL;
++  g_autoptr(CRStyleSheet) theme_stylesheet = NULL;
++  g_autoptr(CRStyleSheet) default_stylesheet = NULL;
+ 
+   G_OBJECT_CLASS (st_theme_parent_class)->constructed (object);
+ 
+@@ -372,22 +389,13 @@ st_theme_finalize (GObject * object)
+ {
+   StTheme *theme = ST_THEME (object);
+ 
+-  g_slist_foreach (theme->custom_stylesheets, (GFunc) cr_stylesheet_unref, NULL);
+-  g_slist_free (theme->custom_stylesheets);
+-  theme->custom_stylesheets = NULL;
+-
+-  g_hash_table_destroy (theme->stylesheets_by_file);
+-  g_hash_table_destroy (theme->files_by_stylesheet);
++  g_clear_pointer (&theme->stylesheets_by_file, g_hash_table_destroy);
+ 
+   g_clear_object (&theme->application_stylesheet);
+   g_clear_object (&theme->theme_stylesheet);
+   g_clear_object (&theme->default_stylesheet);
+ 
+-  if (theme->cascade)
+-    {
+-      cr_cascade_unref (theme->cascade);
+-      theme->cascade = NULL;
+-    }
++  g_clear_pointer (&theme->cascade, cr_cascade_unref);
+ 
+   G_OBJECT_CLASS (st_theme_parent_class)->finalize (object);
+ }
+@@ -890,31 +898,28 @@ add_matched_properties (StTheme      *a_this,
+ 
+             if (import_rule->sheet == NULL)
+               {
+-                GFile *file = NULL;
++                g_autoptr (GFile) file = NULL;
+ 
+                 if (import_rule->url->stryng && import_rule->url->stryng->str)
+                   {
++                    g_autoptr(CRStyleSheet) sheet = NULL;
++
+                     file = _st_theme_resolve_url (a_this,
+                                                   a_nodesheet,
+                                                   import_rule->url->stryng->str);
+-                    import_rule->sheet = parse_stylesheet (file, NULL);
+-                  }
++                    sheet = parse_stylesheet (file, NULL);
+ 
+-                if (import_rule->sheet)
+-                  {
+-                    insert_stylesheet (a_this, file, import_rule->sheet);
+-                    /* refcount of stylesheets starts off at zero, so we don't need to unref! */
++                    if (insert_stylesheet (a_this, file, sheet))
++                      import_rule->sheet = sheet;
+                   }
+-                else
++
++                if (!import_rule->sheet)
+                   {
+                     /* Set a marker to avoid repeatedly trying to parse a non-existent or
+                      * broken stylesheet
+                      */
+                     import_rule->sheet = (CRStyleSheet *) - 1;
+                   }
+-
+-                if (file)
+-                  g_object_unref (file);
+               }
+ 
+             if (import_rule->sheet != (CRStyleSheet *) - 1)
+@@ -979,13 +984,14 @@ add_matched_properties (StTheme      *a_this,
+ static inline int
+ get_origin (const CRDeclaration * decl)
+ {
+-  enum CRStyleOrigin origin = decl->parent_statement->parent_sheet->origin;
+-  gboolean is_extension_sheet = GPOINTER_TO_UINT (decl->parent_statement->parent_sheet->app_data);
++  CRStyleSheet *stylesheet = decl->parent_statement->parent_sheet;
++  enum CRStyleOrigin origin = stylesheet->origin;
++  StyleSheetData *sheet_data = cr_stylesheet_get_app_data (stylesheet);
+ 
+   if (decl->important)
+     origin += ORIGIN_OFFSET_IMPORTANT;
+ 
+-  if (is_extension_sheet)
++  if (sheet_data && sheet_data->extension_stylesheet)
+     origin += ORIGIN_OFFSET_EXTENSION;
+ 
+   return origin;
+@@ -1020,7 +1026,7 @@ _st_theme_get_matched_properties (StTheme        *theme,
+   enum CRStyleOrigin origin = 0;
+   CRStyleSheet *sheet = NULL;
+   GPtrArray *props = g_ptr_array_new ();
+-  GSList *iter;
++  GHashTableIter iter;
+ 
+   g_return_val_if_fail (ST_IS_THEME (theme), NULL);
+   g_return_val_if_fail (ST_IS_THEME_NODE (node), NULL);
+@@ -1034,8 +1040,14 @@ _st_theme_get_matched_properties (StTheme        *theme,
+       add_matched_properties (theme, sheet, node, props);
+     }
+ 
+-  for (iter = theme->custom_stylesheets; iter; iter = iter->next)
+-    add_matched_properties (theme, iter->data, node, props);
++  g_hash_table_iter_init (&iter, theme->stylesheets_by_file);
++  while (g_hash_table_iter_next (&iter, NULL, (gpointer) &sheet))
++    {
++      StyleSheetData *sheet_data = cr_stylesheet_get_app_data (sheet);
++
++      if (sheet_data && sheet_data->extension_stylesheet)
++        add_matched_properties (theme, sheet, node, props);
++    }
+ 
+   /* We count on a stable sort here so that later declarations come
+    * after earlier declarations */
+@@ -1053,19 +1065,18 @@ _st_theme_resolve_url (StTheme      *theme,
+                        CRStyleSheet *base_stylesheet,
+                        const char   *url)
+ {
+-  char *scheme;
++  g_autofree char *scheme = NULL;
+   GFile *resource;
+ 
+   if ((scheme = g_uri_parse_scheme (url)))
+     {
+-      g_free (scheme);
+       resource = g_file_new_for_uri (url);
+     }
+   else if (base_stylesheet != NULL)
+     {
+-      GFile *base_file = NULL, *parent;
+-
+-      base_file = g_hash_table_lookup (theme->files_by_stylesheet, base_stylesheet);
++      StyleSheetData *stylesheet_data = cr_stylesheet_get_app_data (base_stylesheet);
++      GFile *base_file = stylesheet_data->file;
++      g_autoptr (GFile) parent = NULL;
+ 
+       /* This is an internal function, if we get here with
+          a bad @base_stylesheet we have a problem. */
+@@ -1073,8 +1084,6 @@ _st_theme_resolve_url (StTheme      *theme,
+ 
+       parent = g_file_get_parent (base_file);
+       resource = g_file_resolve_relative_path (parent, url);
+-
+-      g_object_unref (parent);
+     }
+   else
+     {

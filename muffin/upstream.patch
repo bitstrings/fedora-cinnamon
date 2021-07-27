@@ -1,127 +1,78 @@
-diff --git a/src/compositor/compositor.c b/src/compositor/compositor.c
-index bcdfa67b..c32a1ef1 100644
---- a/src/compositor/compositor.c
-+++ b/src/compositor/compositor.c
-@@ -1265,15 +1265,24 @@ meta_pre_paint_func (gpointer data)
-   GList *l;
-   MetaCompositor *compositor = data;
-   GSList *screens = compositor->display->screens;
--  MetaWindowActor *top_window;
-+  MetaWindowActor *top_window = NULL;
-   MetaWindowActor *expected_unredirected_window = NULL;
- 
-   if (compositor->windows == NULL)
-     return TRUE;
- 
--  top_window = g_list_last (compositor->windows)->data;
-+  for (l = g_list_last (compositor->windows); l; l = l->prev)
-+    {
-+      MetaRectangle *rect = &meta_window_actor_get_meta_window (l->data)->rect;
-+      if (rect->x + rect->width > 0 && rect->y + rect->height > 0)
-+        {
-+          top_window = l->data;
-+          break;
-+        }
-+    }
- 
--  if (meta_window_actor_should_unredirect (top_window) &&
-+  if (top_window != NULL &&
-+      meta_window_actor_should_unredirect (top_window) &&
-       compositor->disable_unredirect_count == 0)
-     expected_unredirected_window = top_window;
- 
-diff --git a/src/core/constraints.c b/src/core/constraints.c
-index c7946bed..74f33c5d 100644
---- a/src/core/constraints.c
-+++ b/src/core/constraints.c
-@@ -527,8 +527,7 @@ place_window_if_needed(MetaWindow     *window,
-   if (window->placed || did_placement)
-     {
-       if (window->maximize_horizontally_after_placement ||
--          window->maximize_vertically_after_placement   ||
--          window->fullscreen_after_placement)
-+          window->maximize_vertically_after_placement)
-         {
-           /* define a sane saved_rect so that the user can unmaximize or
-            * make unfullscreen to something reasonable.
-@@ -563,15 +562,6 @@ place_window_if_needed(MetaWindow     *window,
-           if (!window->fullscreen)
-             meta_frame_calc_borders (window->frame, info->borders);
- 
--          if (window->fullscreen_after_placement)
--            {
--              window->saved_rect = info->current;
--              window->fullscreen = TRUE;
--              window->fullscreen_after_placement = FALSE;
--
--              g_object_notify (G_OBJECT (window), "fullscreen");
--            }
--
-           window->maximize_horizontally_after_placement = FALSE;
-           window->maximize_vertically_after_placement = FALSE;
-         }
-diff --git a/src/core/window-private.h b/src/core/window-private.h
-index 8f7627bb..f117491c 100644
---- a/src/core/window-private.h
-+++ b/src/core/window-private.h
-@@ -226,9 +226,6 @@ struct _MetaWindow
-   /* Whether the urgent flag of WM_HINTS is set */
-   guint wm_hints_urgent : 1;
- 
--  /* Whether we have to fullscreen after placement */
--  guint fullscreen_after_placement : 1;
--
-   /* Area to cover when in fullscreen mode.  If _NET_WM_FULLSCREEN_MONITORS has
-    * been overridden (via a client message), the window will cover the union of
-    * these monitors.  If not, this is the single monitor which the window's
-diff --git a/src/core/window-props.c b/src/core/window-props.c
-index a9538f63..fe4dc582 100644
---- a/src/core/window-props.c
-+++ b/src/core/window-props.c
-@@ -902,7 +902,7 @@ reload_net_wm_state (MetaWindow    *window,
-       else if (value->v.atom_list.atoms[i] == window->display->atom__NET_WM_STATE_SKIP_PAGER)
-         window->wm_state_skip_pager = TRUE;
-       else if (value->v.atom_list.atoms[i] == window->display->atom__NET_WM_STATE_FULLSCREEN)
--        window->fullscreen_after_placement = TRUE;
-+        window->fullscreen = TRUE;
-       else if (value->v.atom_list.atoms[i] == window->display->atom__NET_WM_STATE_ABOVE)
-         window->wm_state_above = TRUE;
-       else if (value->v.atom_list.atoms[i] == window->display->atom__NET_WM_STATE_BELOW)
-diff --git a/src/core/window.c b/src/core/window.c
-index 59ab1177..aa346bdd 100644
---- a/src/core/window.c
-+++ b/src/core/window.c
-@@ -1211,7 +1211,6 @@ meta_window_new_with_attrs (MetaDisplay       *display,
-   window->tile_after_placement = FALSE;
-   window->move_after_placement = FALSE;
-   window->fullscreen = FALSE;
--  window->fullscreen_after_placement = FALSE;
-   window->fullscreen_monitors[0] = -1;
-   window->require_fully_onscreen = TRUE;
-   window->require_on_single_monitor = TRUE;
-@@ -4122,15 +4121,6 @@ void
- meta_window_unmaximize (MetaWindow        *window,
-                         MetaMaximizeFlags  directions)
+diff --git a/src/core/keybindings.c b/src/core/keybindings.c
+index 11d4c4ab..1cb7b412 100644
+--- a/src/core/keybindings.c
++++ b/src/core/keybindings.c
+@@ -2664,23 +2664,24 @@ handle_move_to_center  (MetaDisplay    *display,
+                         gpointer        dummy)
  {
--  /* Restore tiling if necessary */
--  if (window->tile_mode == META_TILE_LEFT ||
--      window->tile_mode == META_TILE_RIGHT)
--    {
--      window->maximized_horizontally = FALSE;
--      meta_window_real_tile (window, FALSE);
--      return;
--    }
--
-   meta_window_unmaximize_internal (window, directions, &window->saved_rect,
-                                    NorthWestGravity);
+   MetaFrameBorders borders;
+-  const MetaMonitorInfo *monitor;
+-  int window_width, window_height;
++  MetaRectangle work_area, outer_rect;
+   int center_x, center_y;
++  int x, y;
+ 
+-  monitor = meta_screen_get_current_monitor_info (window->screen);
++  meta_window_get_work_area_current_monitor (window, &work_area);
++  meta_window_get_input_rect (window, &outer_rect);
+   meta_frame_calc_borders (window->frame, &borders);
+ 
+-  window_width = (window->frame ? window->frame->rect.width : window->rect.width);
+-  window_height = (window->frame ? window->frame->rect.height : window->rect.height);
++  center_x = work_area.x + work_area.width / 2;
++  center_y = work_area.y + work_area.height / 2;
+ 
+-  center_x = monitor->rect.x + monitor->rect.width / 2;
+-  center_y = monitor->rect.y + monitor->rect.height / 2;
++  x = center_x - (window->rect.width / 2);
++  y = center_y - (outer_rect.height / 2) + borders.visible.top + borders.invisible.top;
+ 
+   meta_window_move_resize (window,
+           TRUE,
+-          center_x + borders.visible.left - window_width / 2,
+-          center_y + borders.visible.top - window_height / 2,
++          x,
++          y,
+           window->rect.width,
+           window->rect.height);
  }
-@@ -12465,9 +12455,7 @@ meta_window_tile (MetaWindow *window,
-       meta_window_real_tile (window, TRUE);
-   } else {
-       window->last_tile_mode = window->tile_mode;
--      window->tile_mode = mode;
-       window->custom_snap_size = FALSE;
--      meta_window_set_tile_type (window, META_WINDOW_TILE_TYPE_NONE);
-       window->tile_monitor_number = window->saved_maximize ? window->monitor->number
-                                                            : -1;
-       if (window->saved_maximize)
+diff --git a/src/core/place.c b/src/core/place.c
+index c4dd0446..abbd58f8 100644
+--- a/src/core/place.c
++++ b/src/core/place.c
+@@ -136,25 +136,19 @@ place_in_center (MetaWindow *window,
+                  int *new_x,
+                  int *new_y)
+ {
+-  int center_x, center_y;
+-  const MetaMonitorInfo *xi;
++  int center_x, center_y, monitor_n;
++  MetaRectangle work_area, outer_rect;
+ 
+-  xi = meta_screen_get_current_monitor_info (window->screen);
+-  center_x = *new_x + xi->rect.width / 2;
+-  center_y = *new_y + xi->rect.height / 2;
++  monitor_n = meta_screen_get_current_monitor (window->screen);
+ 
+-  int window_width, window_height;
+-  window_width = window->frame ? window->frame->rect.width : window->rect.width;
+-  window_height = window->frame ? window->frame->rect.height : window->rect.height;
++  meta_window_get_work_area_for_monitor (window, monitor_n, &work_area);
++  meta_window_get_input_rect (window, &outer_rect);
+ 
+-  if (borders) {
+-    *new_x = center_x + borders->visible.left - window_width / 2;
+-    *new_y = center_y + borders->visible.top  - window_height / 2;
+-  }
+-  else {
+-    *new_x = center_x - window_width / 2;
+-    *new_y = center_y - window_height / 2;
+-  }
++  center_x = work_area.x + work_area.width / 2;
++  center_y = work_area.y + work_area.height / 2;
++
++  *new_x = center_x - (window->rect.width / 2);
++  *new_y = center_y - (outer_rect.height / 2) + borders->visible.top + borders->invisible.top;
+ 
+   return TRUE;
+ }

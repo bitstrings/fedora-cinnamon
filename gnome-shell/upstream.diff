@@ -1,0 +1,607 @@
+diff --git a/data/theme/gnome-shell-sass/_common.scss b/data/theme/gnome-shell-sass/_common.scss
+index 9df3d8d43..60d92ba5d 100644
+--- a/data/theme/gnome-shell-sass/_common.scss
++++ b/data/theme/gnome-shell-sass/_common.scss
+@@ -38,6 +38,7 @@ $modal_radius:$base_border_radius * 2;
+ // non-standard colors
+ $bubble_borders_color: lighten($borders_color, if($variant=='light', 0%, 5%));
+ // $bubble_borders_color: if($variant == 'light', rgba(255,255,255,0.1), rgba(0,0,0,0.3));
++$invisible_occluded: rgba(255,255,255,0);
+ 
+ // hover
+ $hover_bg_color: if($variant=='light', darken($bg_color, 3%), lighten($bg_color, 5%));
+diff --git a/data/theme/gnome-shell-sass/widgets/_message-list.scss b/data/theme/gnome-shell-sass/widgets/_message-list.scss
+index 02d122b91..bb9239f49 100644
+--- a/data/theme/gnome-shell-sass/widgets/_message-list.scss
++++ b/data/theme/gnome-shell-sass/widgets/_message-list.scss
+@@ -25,6 +25,20 @@
+   // NOTE: remove the padding if notification_bubble could remove margin for drop shadow
+   padding: $base_margin;
+   spacing: $base_spacing * 2;
++
++  .dnd-button {
++    // We need this because the focus outline isn't inset like for the buttons
++    // so the dnd button would grow when it gets focus if we didn't change only
++    // its color when focusing.
++    border-width: 2px;
++    border-color: transparent;
++    border-radius: 99px;
++    border-style: solid;
++
++    &:focus {
++      border-color: transparentize($selected_bg_color, 0.4);
++    }
++  }
+ }
+ 
+ // message bubbles
+diff --git a/data/theme/gnome-shell-sass/widgets/_window-picker.scss b/data/theme/gnome-shell-sass/widgets/_window-picker.scss
+index fa3f19194..04692856f 100644
+--- a/data/theme/gnome-shell-sass/widgets/_window-picker.scss
++++ b/data/theme/gnome-shell-sass/widgets/_window-picker.scss
+@@ -48,5 +48,6 @@ $window_close_button_padding: 3px;
+ .workspace-background {
+   // keep in sync with BACKGROUND_CORNER_RADIUS_PIXELS in workspace.js
+   border-radius: 30px;
++  background-color: $invisible_occluded;
+   box-shadow: 0 4px 16px 4px transparentize(darken($osd_bg_color, 30%), 0.7);
+ }
+diff --git a/js/ui/appDisplay.js b/js/ui/appDisplay.js
+index f86a7bb67..3673c8541 100644
+--- a/js/ui/appDisplay.js
++++ b/js/ui/appDisplay.js
+@@ -1831,11 +1831,13 @@ class AppDisplay extends BaseAppView {
+ 
+         // Create the new folder
+         let newFolderPath = this._folderSettings.path.concat('folders/', newFolderId, '/');
+-        let newFolderSettings = new Gio.Settings({
+-            schema_id: 'org.gnome.desktop.app-folders.folder',
+-            path: newFolderPath,
+-        });
+-        if (!newFolderSettings) {
++        let newFolderSettings;
++        try {
++            newFolderSettings = new Gio.Settings({
++                schema_id: 'org.gnome.desktop.app-folders.folder',
++                path: newFolderPath,
++            });
++        } catch (e) {
+             log('Error creating new folder');
+             return false;
+         }
+@@ -3531,8 +3533,7 @@ var AppIconMenu = class AppIconMenu extends PopupMenu.PopupMenu {
+ 
+             if (Shell.AppSystem.get_default().lookup_app('org.gnome.Software.desktop')) {
+                 this._appendSeparator();
+-                let item = this._appendMenuItem(_("Show Details"));
+-                item.connect('activate', async () => {
++                this.addAction(_('Show Details'), async () => {
+                     let id = this._source.app.get_id();
+                     let args = GLib.Variant.new('(ss)', [id, '']);
+                     const bus = await Gio.DBus.get(Gio.BusType.SESSION, null);
+diff --git a/js/ui/boxpointer.js b/js/ui/boxpointer.js
+index 82d28cd83..c7a8f92d0 100644
+--- a/js/ui/boxpointer.js
++++ b/js/ui/boxpointer.js
+@@ -556,7 +556,7 @@ var BoxPointer = GObject.registerClass({
+                 arrowOrigin = y1;
+             } else if (arrowOrigin >= (y2 - (borderRadius + halfBase))) {
+                 if (arrowOrigin < y2)
+-                    resX -= y2 - arrowOrigin;
++                    resY -= y2 - arrowOrigin;
+                 arrowOrigin = y2;
+             }
+             break;
+diff --git a/js/ui/calendar.js b/js/ui/calendar.js
+index 710efbac4..8ccc73d70 100644
+--- a/js/ui/calendar.js
++++ b/js/ui/calendar.js
+@@ -954,10 +954,12 @@ class CalendarMessageList extends St.Widget {
+ 
+         this._dndSwitch = new DoNotDisturbSwitch();
+         this._dndButton = new St.Button({
++            style_class: 'dnd-button',
+             can_focus: true,
+             toggle_mode: true,
+             child: this._dndSwitch,
+             label_actor: dndLabel,
++            y_align: Clutter.ActorAlign.CENTER,
+         });
+         this._dndSwitch.bind_property('state',
+             this._dndButton, 'checked',
+diff --git a/js/ui/components/telepathyClient.js b/js/ui/components/telepathyClient.js
+index 0c9514e2b..103688259 100644
+--- a/js/ui/components/telepathyClient.js
++++ b/js/ui/components/telepathyClient.js
+@@ -415,7 +415,7 @@ class ChatSource extends MessageTray.Source {
+ 
+     _updateAvatarIcon() {
+         this.iconUpdated();
+-        if (this._notifiction) {
++        if (this._notification) {
+             this._notification.update(this._notification.title,
+                                       this._notification.bannerBodyText,
+                                       { gicon: this.getIcon() });
+diff --git a/js/ui/keyboard.js b/js/ui/keyboard.js
+index bc72d77f3..d0dde5b23 100644
+--- a/js/ui/keyboard.js
++++ b/js/ui/keyboard.js
+@@ -2125,12 +2125,12 @@ var KeyboardController = class {
+     }
+ 
+     keyvalPress(keyval) {
+-        this._virtualDevice.notify_keyval(Clutter.get_current_event_time(),
++        this._virtualDevice.notify_keyval(Clutter.get_current_event_time() * 1000,
+                                           keyval, Clutter.KeyState.PRESSED);
+     }
+ 
+     keyvalRelease(keyval) {
+-        this._virtualDevice.notify_keyval(Clutter.get_current_event_time(),
++        this._virtualDevice.notify_keyval(Clutter.get_current_event_time() * 1000,
+                                           keyval, Clutter.KeyState.RELEASED);
+     }
+ };
+diff --git a/js/ui/magnifier.js b/js/ui/magnifier.js
+index 9db8e999c..8334794f3 100644
+--- a/js/ui/magnifier.js
++++ b/js/ui/magnifier.js
+@@ -228,26 +228,25 @@ var Magnifier = class Magnifier {
+      * scrollToMousePos:
+      * Position all zoom regions' ROI relative to the current location of the
+      * system pointer.
+-     * @returns {bool} true.
+      */
+     scrollToMousePos() {
+         let [xMouse, yMouse] = global.get_pointer();
+ 
+-        if (xMouse != this.xMouse || yMouse != this.yMouse) {
+-            this.xMouse = xMouse;
+-            this.yMouse = yMouse;
++        if (xMouse === this.xMouse && yMouse === this.yMouse)
++            return;
+ 
+-            let sysMouseOverAny = false;
+-            this._zoomRegions.forEach(zoomRegion => {
+-                if (zoomRegion.scrollToMousePos())
+-                    sysMouseOverAny = true;
+-            });
+-            if (sysMouseOverAny)
+-                this.hideSystemCursor();
+-            else
+-                this.showSystemCursor();
+-        }
+-        return true;
++        this.xMouse = xMouse;
++        this.yMouse = yMouse;
++
++        let sysMouseOverAny = false;
++        this._zoomRegions.forEach(zoomRegion => {
++            if (zoomRegion.scrollToMousePos())
++                sysMouseOverAny = true;
++        });
++        if (sysMouseOverAny)
++            this.hideSystemCursor();
++        else
++            this.showSystemCursor();
+     }
+ 
+     /**
+diff --git a/js/ui/overviewControls.js b/js/ui/overviewControls.js
+index c15316169..6cbaa22ba 100644
+--- a/js/ui/overviewControls.js
++++ b/js/ui/overviewControls.js
+@@ -47,8 +47,9 @@ class ControlsManagerLayout extends Clutter.BoxLayout {
+         stateAdjustment.connect('notify::value', () => this.layout_changed());
+     }
+ 
+-    _computeWorkspacesBoxForState(state, box, startY, searchHeight, dashHeight, thumbnailsHeight) {
+-        const workspaceBox = box.copy();
++    _computeWorkspacesBoxForState(state, workAreaBox, searchHeight, dashHeight, thumbnailsHeight) {
++        const workspaceBox = workAreaBox.copy();
++        const [startX, startY] = workAreaBox.get_origin();
+         const [width, height] = workspaceBox.get_size();
+         const { spacing } = this;
+         const { expandFraction } = this._workspacesThumbnails;
+@@ -57,7 +58,7 @@ class ControlsManagerLayout extends Clutter.BoxLayout {
+         case ControlsState.HIDDEN:
+             break;
+         case ControlsState.WINDOW_PICKER:
+-            workspaceBox.set_origin(0,
++            workspaceBox.set_origin(startX,
+                 startY + searchHeight + spacing +
+                 thumbnailsHeight + spacing * expandFraction);
+             workspaceBox.set_size(width,
+@@ -67,7 +68,7 @@ class ControlsManagerLayout extends Clutter.BoxLayout {
+                 thumbnailsHeight - spacing * expandFraction);
+             break;
+         case ControlsState.APP_GRID:
+-            workspaceBox.set_origin(0, startY + searchHeight + spacing);
++            workspaceBox.set_origin(startX, startY + searchHeight + spacing);
+             workspaceBox.set_size(
+                 width,
+                 Math.round(height * SMALL_WORKSPACE_RATIO));
+@@ -77,18 +78,19 @@ class ControlsManagerLayout extends Clutter.BoxLayout {
+         return workspaceBox;
+     }
+ 
+-    _getAppDisplayBoxForState(state, box, startY, searchHeight, dashHeight, appGridBox) {
+-        const [width, height] = box.get_size();
++    _getAppDisplayBoxForState(state, workAreaBox, searchHeight, dashHeight, appGridBox) {
++        const [startX, startY] = workAreaBox.get_origin();
++        const [width, height] = workAreaBox.get_size();
+         const appDisplayBox = new Clutter.ActorBox();
+         const { spacing } = this;
+ 
+         switch (state) {
+         case ControlsState.HIDDEN:
+         case ControlsState.WINDOW_PICKER:
+-            appDisplayBox.set_origin(0, box.y2);
++            appDisplayBox.set_origin(startX, workAreaBox.y2);
+             break;
+         case ControlsState.APP_GRID:
+-            appDisplayBox.set_origin(0,
++            appDisplayBox.set_origin(startX,
+                 startY + searchHeight + spacing + appGridBox.get_height());
+             break;
+         }
+@@ -126,34 +128,37 @@ class ControlsManagerLayout extends Clutter.BoxLayout {
+         return [0, 0];
+     }
+ 
+-    vfunc_allocate(container, box) {
++    vfunc_allocate(_container, _box) {
+         const childBox = new Clutter.ActorBox();
+ 
+         const { spacing } = this;
+ 
+-        let startY = 0;
+-        if (Main.layoutManager.panelBox.y === Main.layoutManager.primaryMonitor.y) {
+-            startY = Main.layoutManager.panelBox.height;
+-            box.y1 += startY;
+-        }
+-        const [width, height] = box.get_size();
++        const monitor = Main.layoutManager.findMonitorForActor(this._container);
++        const workArea = Main.layoutManager.getWorkAreaForMonitor(monitor.index);
++        const startX = workArea.x - monitor.x;
++        const startY = workArea.y - monitor.y;
++        const workAreaBox = new Clutter.ActorBox();
++        workAreaBox.set_origin(startX, startY);
++        workAreaBox.set_size(workArea.width, workArea.height);
++        const [width, height] = workAreaBox.get_size();
+         let availableHeight = height;
++        const availableWidth = width;
+ 
+         // Search entry
+         let [searchHeight] = this._searchEntry.get_preferred_height(width);
+-        childBox.set_origin(0, startY);
++        childBox.set_origin(startX, startY);
+         childBox.set_size(width, searchHeight);
+         this._searchEntry.allocate(childBox);
+ 
+         availableHeight -= searchHeight + spacing;
+ 
+         // Dash
+-        const maxDashHeight = Math.round(box.get_height() * DASH_MAX_HEIGHT_RATIO);
++        const maxDashHeight = Math.round(workAreaBox.get_height() * DASH_MAX_HEIGHT_RATIO);
+         this._dash.setMaxSize(width, maxDashHeight);
+ 
+         let [, dashHeight] = this._dash.get_preferred_height(width);
+         dashHeight = Math.min(dashHeight, maxDashHeight);
+-        childBox.set_origin(0, startY + height - dashHeight);
++        childBox.set_origin(startX, startY + height - dashHeight);
+         childBox.set_size(width, dashHeight);
+         this._dash.allocate(childBox);
+ 
+@@ -168,13 +173,13 @@ class ControlsManagerLayout extends Clutter.BoxLayout {
+             thumbnailsHeight = Math.min(
+                 thumbnailsHeight * expandFraction,
+                 height * WorkspaceThumbnail.MAX_THUMBNAIL_SCALE);
+-            childBox.set_origin(0, startY + searchHeight + spacing);
++            childBox.set_origin(startX, startY + searchHeight + spacing);
+             childBox.set_size(width, thumbnailsHeight);
+             this._workspacesThumbnails.allocate(childBox);
+         }
+ 
+         // Workspaces
+-        let params = [box, startY, searchHeight, dashHeight, thumbnailsHeight];
++        let params = [workAreaBox, searchHeight, dashHeight, thumbnailsHeight];
+         const transitionParams = this._stateAdjustment.getStateTransitionParams();
+ 
+         // Update cached boxes
+@@ -199,7 +204,7 @@ class ControlsManagerLayout extends Clutter.BoxLayout {
+             const workspaceAppGridBox =
+                 this._cachedWorkspaceBoxes.get(ControlsState.APP_GRID);
+ 
+-            params = [box, startY, searchHeight, dashHeight, workspaceAppGridBox];
++            params = [workAreaBox, searchHeight, dashHeight, workspaceAppGridBox];
+             let appDisplayBox;
+             if (!transitionParams.transitioning) {
+                 appDisplayBox =
+@@ -217,8 +222,8 @@ class ControlsManagerLayout extends Clutter.BoxLayout {
+         }
+ 
+         // Search
+-        childBox.set_origin(0, startY + searchHeight + spacing);
+-        childBox.set_size(width, availableHeight);
++        childBox.set_origin(startX, startY + searchHeight + spacing);
++        childBox.set_size(availableWidth, availableHeight);
+ 
+         this._searchController.allocate(childBox);
+ 
+diff --git a/js/ui/popupMenu.js b/js/ui/popupMenu.js
+index 11528560d..ff83d2ceb 100644
+--- a/js/ui/popupMenu.js
++++ b/js/ui/popupMenu.js
+@@ -324,7 +324,6 @@ var Switch = GObject.registerClass({
+         super._init({
+             style_class: 'toggle-switch',
+             accessible_role: Atk.Role.CHECK_BOX,
+-            can_focus: true,
+             state,
+         });
+     }
+diff --git a/js/ui/search.js b/js/ui/search.js
+index de13d6e01..7300b053e 100644
+--- a/js/ui/search.js
++++ b/js/ui/search.js
+@@ -429,6 +429,7 @@ var GridSearchResultsLayout = GObject.registerClass({
+                 childBox.set_size(0, 0);
+ 
+             child.allocate(childBox);
++            child.can_focus = childBox.get_area() > 0;
+ 
+             childBox.x1 += childWidth;
+         }
+diff --git a/js/ui/status/location.js b/js/ui/status/location.js
+index 4250ed0fe..91a7cf66b 100644
+--- a/js/ui/status/location.js
++++ b/js/ui/status/location.js
+@@ -16,8 +16,8 @@ const LOCATION_SCHEMA = 'org.gnome.system.location';
+ const MAX_ACCURACY_LEVEL = 'max-accuracy-level';
+ const ENABLED = 'enabled';
+ 
+-const APP_PERMISSIONS_TABLE = 'gnome';
+-const APP_PERMISSIONS_ID = 'geolocation';
++const APP_PERMISSIONS_TABLE = 'location';
++const APP_PERMISSIONS_ID = 'location';
+ 
+ var GeoclueAccuracyLevel = {
+     NONE: 0,
+diff --git a/js/ui/workspace.js b/js/ui/workspace.js
+index 75efe4d99..7bc3cdfb6 100644
+--- a/js/ui/workspace.js
++++ b/js/ui/workspace.js
+@@ -627,8 +627,9 @@ var WorkspaceLayout = GObject.registerClass({
+         }
+ 
+         const { ControlsState } = OverviewControls;
+-        const inSessionTransition =
+-            this._overviewAdjustment.value <= ControlsState.WINDOW_PICKER;
++        const { currentState, transitioning } =
++            this._overviewAdjustment.getStateTransitionParams();
++        const inSessionTransition = currentState <= ControlsState.WINDOW_PICKER;
+ 
+         const window = this._sortedWindows[0];
+ 
+@@ -638,8 +639,8 @@ var WorkspaceLayout = GObject.registerClass({
+             const [, bottomOversize] = window.chromeHeights();
+             const [containerX, containerY] = containerBox.get_origin();
+ 
+-            const extraHeightProgress = this._overviewAdjustment.value -
+-                OverviewControls.ControlsState.WINDOW_PICKER;
++            const extraHeightProgress =
++                currentState - OverviewControls.ControlsState.WINDOW_PICKER;
+ 
+             const extraClipHeight = bottomOversize * (1 - extraHeightProgress);
+ 
+@@ -689,7 +690,8 @@ var WorkspaceLayout = GObject.registerClass({
+                 workspaceBoxWidth = 0;
+                 workspaceBoxHeight = 0;
+ 
+-                child.opacity = stateAdjustementValue * 255;
++                if (transitioning)
++                    child.opacity = stateAdjustementValue * 255;
+             }
+ 
+             // Don't allow the scaled floating size to drop below
+@@ -1012,13 +1014,21 @@ class WorkspaceBackground extends St.Widget {
+ 
+         const [contentWidth, contentHeight] = contentBox.get_size();
+         const monitor = Main.layoutManager.monitors[this._monitorIndex];
+-        const xOff = (contentWidth / this._workarea.width) *
+-            (this._workarea.x - monitor.x);
+-        const yOff = (contentHeight / this._workarea.height) *
+-            (this._workarea.y - monitor.y);
+-
+-        contentBox.set_origin(-xOff, -yOff);
+-        contentBox.set_size(xOff + contentWidth, yOff + contentHeight);
++        const [mX1, mX2] = [monitor.x, monitor.x + monitor.width];
++        const [mY1, mY2] = [monitor.y, monitor.y + monitor.height];
++        const [wX1, wX2] = [this._workarea.x, this._workarea.x + this._workarea.width];
++        const [wY1, wY2] = [this._workarea.y, this._workarea.y + this._workarea.height];
++        const xScale = contentWidth / this._workarea.width;
++        const yScale = contentHeight / this._workarea.height;
++        const leftOffset = wX1 - mX1;
++        const topOffset = wY1 - mY1;
++        const rightOffset = mX2 - wX2;
++        const bottomOffset = mY2 - wY2;
++
++        contentBox.set_origin(-leftOffset * xScale, -topOffset * yScale);
++        contentBox.set_size(
++            contentWidth + (leftOffset + rightOffset) * xScale,
++            contentHeight + (topOffset + bottomOffset) * yScale);
+         this._backgroundGroup.allocate(contentBox);
+     }
+ 
+@@ -1096,6 +1106,7 @@ class Workspace extends St.Widget {
+         this.connect('style-changed', this._onStyleChanged.bind(this));
+         this.connect('destroy', this._onDestroy.bind(this));
+ 
++        this._skipTaskbarSignals = new Map();
+         const windows = global.get_window_actors().map(a => a.meta_window)
+             .filter(this._isMyWindow, this);
+ 
+@@ -1222,6 +1233,14 @@ class Workspace extends St.Widget {
+         if (!this._isMyWindow(metaWin))
+             return;
+ 
++        this._skipTaskbarSignals.set(metaWin,
++            metaWin.connect('notify::skip-taskbar', () => {
++                if (metaWin.skip_taskbar)
++                    this._doRemoveWindow(metaWin);
++                else
++                    this._doAddWindow(metaWin);
++            }));
++
+         if (!this._isOverviewWindow(metaWin)) {
+             if (metaWin.get_transient_for() == null)
+                 return;
+@@ -1290,7 +1309,15 @@ class Workspace extends St.Widget {
+         return false;
+     }
+ 
++    _clearSkipTaskbarSignals() {
++        for (const [metaWin, id] of this._skipTaskbarSignals)
++            metaWin.disconnect(id);
++        this._skipTaskbarSignals.clear();
++    }
++
+     prepareToLeaveOverview() {
++        this._clearSkipTaskbarSignals();
++
+         for (let i = 0; i < this._windows.length; i++)
+             this._windows[i].remove_all_transitions();
+ 
+@@ -1304,6 +1331,8 @@ class Workspace extends St.Widget {
+     }
+ 
+     _onDestroy() {
++        this._clearSkipTaskbarSignals();
++
+         if (this._overviewHiddenId) {
+             Main.overview.disconnect(this._overviewHiddenId);
+             this._overviewHiddenId = 0;
+diff --git a/src/shell-global.c b/src/shell-global.c
+index f05ec9b41..24e771f52 100644
+--- a/src/shell-global.c
++++ b/src/shell-global.c
+@@ -1236,7 +1236,7 @@ shell_global_reexec_self (ShellGlobal *global)
+   char *buf;
+   char *buf_p;
+   char *buf_end;
+-  GError *error = NULL;
++  g_autoptr (GError) error = NULL;
+ 
+   if (!g_file_get_contents ("/proc/self/cmdline", &buf, &len, &error))
+     {
+diff --git a/src/shell-perf-log.c b/src/shell-perf-log.c
+index 95b116905..3bd5228a0 100644
+--- a/src/shell-perf-log.c
++++ b/src/shell-perf-log.c
+@@ -862,7 +862,7 @@ replay_to_json (gint64      time,
+                 gpointer    user_data)
+ {
+   ReplayToJsonClosure *closure = user_data;
+-  char *event_str;
++  g_autofree char *event_str = NULL;
+ 
+   if (closure->error != NULL)
+     return;
+diff --git a/src/st/st-icon.c b/src/st/st-icon.c
+index c43d7c91b..0405d8525 100644
+--- a/src/st/st-icon.c
++++ b/src/st/st-icon.c
+@@ -456,12 +456,12 @@ st_icon_update (StIcon *icon)
+       return;
+     }
+ 
+-  resource_scale = clutter_actor_get_resource_scale (CLUTTER_ACTOR (icon));
+-
+   theme_node = st_widget_peek_theme_node (ST_WIDGET (icon));
+   if (theme_node == NULL)
+     return;
+ 
++  resource_scale = clutter_actor_get_resource_scale (CLUTTER_ACTOR (icon));
++
+   stage = clutter_actor_get_stage (CLUTTER_ACTOR (icon));
+   context = st_theme_context_get_for_stage (CLUTTER_STAGE (stage));
+   g_object_get (context, "scale-factor", &paint_scale, NULL);
+diff --git a/src/st/st-scroll-bar.c b/src/st/st-scroll-bar.c
+index 01674df65..5aa4f0688 100644
+--- a/src/st/st-scroll-bar.c
++++ b/src/st/st-scroll-bar.c
+@@ -200,23 +200,11 @@ scroll_bar_allocate_children (StScrollBar           *bar,
+ 
+   st_theme_node_get_content_box (theme_node, box, &content_box);
+ 
+-  if (priv->vertical)
+-    {
+-      trough_box.x1 = content_box.x1;
+-      trough_box.y1 = content_box.y1;
+-      trough_box.x2 = content_box.x2;
+-      trough_box.y2 = content_box.y2;
+-      clutter_actor_allocate (priv->trough, &trough_box);
+-    }
+-  else
+-    {
+-      trough_box.x1 = content_box.x1;
+-      trough_box.y1 = content_box.y1;
+-      trough_box.x2 = content_box.x2;
+-      trough_box.y2 = content_box.y2;
+-      clutter_actor_allocate (priv->trough, &trough_box);
+-    }
+-
++  trough_box.x1 = content_box.x1;
++  trough_box.y1 = content_box.y1;
++  trough_box.x2 = content_box.x2;
++  trough_box.y2 = content_box.y2;
++  clutter_actor_allocate (priv->trough, &trough_box);
+ 
+   if (priv->adjustment)
+     {
+diff --git a/src/st/st-theme-node-drawing.c b/src/st/st-theme-node-drawing.c
+index b32c76be2..f7109756a 100644
+--- a/src/st/st-theme-node-drawing.c
++++ b/src/st/st-theme-node-drawing.c
+@@ -2021,6 +2021,8 @@ st_theme_node_paint_sliced_shadow (StThemeNodePaintState *state,
+   gfloat shadow_blur_radius, x_spread_factor, y_spread_factor;
+   float rectangles[8 * 9];
+   gint idx;
++  ClutterColor background_color;
++  static const ClutterColor invisible_occluded = {0xff, 0xff, 0xff, 0x00};
+ 
+   if (paint_opacity == 0)
+     return;
+@@ -2178,16 +2180,23 @@ st_theme_node_paint_sliced_shadow (StThemeNodePaintState *state,
+       rectangles[idx++] = s_bottom;
+     }
+ 
+-  /* Center middle */
+-  rectangles[idx++] = left;
+-  rectangles[idx++] = top;
+-  rectangles[idx++] = right;
+-  rectangles[idx++] = bottom;
++  /* Center middle is not definitely occluded? */
++  st_theme_node_get_background_color (node, &background_color);
++  if (!clutter_color_equal (&background_color, &invisible_occluded) ||
++      paint_opacity < 255 ||
++      xoffset > shadow_blur_radius || left < 0 ||
++      yoffset > shadow_blur_radius || top < 0)
++    {
++      rectangles[idx++] = left;
++      rectangles[idx++] = top;
++      rectangles[idx++] = right;
++      rectangles[idx++] = bottom;
+ 
+-  rectangles[idx++] = s_left;
+-  rectangles[idx++] = s_top;
+-  rectangles[idx++] = s_right;
+-  rectangles[idx++] = s_bottom;
++      rectangles[idx++] = s_left;
++      rectangles[idx++] = s_top;
++      rectangles[idx++] = s_right;
++      rectangles[idx++] = s_bottom;
++    }
+ 
+   if (xend > right)
+     {

@@ -1,0 +1,96 @@
+diff --git a/js/ui/appDisplay.js b/js/ui/appDisplay.js
+index f86a7bb67876aaedd7e760c8002a61d831dac85d..7d227632f7f0162fae67185f1755f6231f06eb2a 100644
+--- a/js/ui/appDisplay.js
++++ b/js/ui/appDisplay.js
+@@ -174,6 +174,16 @@ var BaseAppView = GObject.registerClass({
+         this._scrollView.connect('leave-event', this._onLeave.bind(this));
+         this._scrollView.connect('button-press-event', this._onButtonPress.bind(this));
+ 
++        // Disable the the fade effect shader. IconGrid does its own fading
++        // that's much faster.
++        this._scrollView.update_fade_effect(
++            new Clutter.Margin({
++                left: 0.0,
++                right: 0.0,
++                top: 0.0,
++                bottom: 0.0,
++            }));
++
+         this._scrollView.add_actor(this._grid);
+ 
+         const scroll = this._scrollView.hscroll;
+@@ -368,10 +378,12 @@ var BaseAppView = GObject.registerClass({
+                 -(this._availWidth - this._grid.layout_manager.pageWidth) / 2);
+         }
+ 
+-        this._scrollView.update_fade_effect(fadeMargin);
+-        const effect = this._scrollView.get_effect('fade');
+-        if (effect)
+-            effect.extend_fade_area = true;
++        this._updateFadeMargin(fadeMargin);
++    }
++
++    _updateFadeMargin(margin) {
++        const pagePos = this._adjustment.value / this._adjustment.page_size;
++        this._grid.updateFade(pagePos, margin);
+     }
+ 
+     _updateFade() {
+@@ -399,7 +411,7 @@ var BaseAppView = GObject.registerClass({
+                 return;
+         }
+ 
+-        this._scrollView.update_fade_effect(
++        this._updateFadeMargin(
+             new Clutter.Margin({
+                 left: hOffset,
+                 right: hOffset,
+@@ -2175,6 +2187,10 @@ class AppViewItem extends St.Button {
+     get name() {
+         return this._name;
+     }
++
++    get dragging() {
++        return this._draggable && this._dragging;
++    }
+ });
+ 
+ var FolderGrid = GObject.registerClass(
+diff --git a/js/ui/iconGrid.js b/js/ui/iconGrid.js
+index cdceb020df2e032f2c97618a326683f48b1014eb..7fd793c14067ece7b98123933aa1ce5858711290 100644
+--- a/js/ui/iconGrid.js
++++ b/js/ui/iconGrid.js
+@@ -1606,4 +1606,33 @@ var IconGrid = GObject.registerClass({
+         const layoutManager = this.layout_manager;
+         return layoutManager.rows_per_page * layoutManager.columns_per_page;
+     }
++
++    updateFade(pagePosition, fadeMargin) {
++        const pageWidth = this.layout_manager.pageWidth;
++        const fadeOutLeftX = pagePosition * pageWidth + fadeMargin.left;
++        const fadeOutRightX = (pagePosition + 1) * pageWidth - fadeMargin.right;
++
++        let children = [];
++        for (let p = 0; p < this.nPages; p++) {
++            children = children.concat(
++                this.getItemsAtPage(p).filter(c => c.visible && !c.dragging)
++            );
++        }
++
++        children.forEach(child => {
++            const childWidth = child.width;
++            const childLeft = child.x;
++            const childRight = child.x + childWidth;
++
++            let progress = 0.0;
++
++            if (childLeft < fadeOutLeftX && fadeMargin.left > 0)
++                progress = (fadeOutLeftX - childLeft) / childWidth;
++            else if (childRight > fadeOutRightX && fadeMargin.right > 0)
++                progress = (childRight - fadeOutRightX) / childWidth;
++
++            progress = Math.clamp(progress, 0.0, 1.0);
++            child.set_opacity((1.0 - progress) * 255.0);
++        });
++    }
+ });
