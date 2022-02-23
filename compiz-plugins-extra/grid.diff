@@ -1,0 +1,27 @@
+diff --git a/src/grid/grid.c b/src/grid/grid.c
+index a8d5152..ea7df04 100644
+--- a/src/grid/grid.c
++++ b/src/grid/grid.c
+@@ -476,14 +476,14 @@ gridHandleEvent (CompDisplay *d,
+ 	if (gridGetOutputSelectMousePointer(d))
+ 		getWorkareaForOutput (s, o, &gs->workarea);
+ 
+-	Bool top = (pointerY < extents.y1 + gridGetTopEdgeThreshold(d) &&
+-				pointerY > extents.y1 - gridGetBottomEdgeThreshold(d));
+-	Bool bottom = (pointerY > (extents.y2 - gridGetBottomEdgeThreshold(d)) &&
+-					pointerY < (extents.y2 + gridGetTopEdgeThreshold(d)));
+-	Bool left = (pointerX < extents.x1 + gridGetLeftEdgeThreshold(d) &&
+-				pointerX > extents.x1 - gridGetRightEdgeThreshold(d));
+-	Bool right = (pointerX > (extents.x2 - gridGetRightEdgeThreshold(d)) &&
+-				 pointerX < (extents.x2 + gridGetLeftEdgeThreshold(d)));
++	Bool top = (pointerY < extents.y1 &&
++				pointerY > extents.y1);
++	Bool bottom = (pointerY > (extents.y2) &&
++					pointerY < (extents.y2));
++	Bool left = (pointerX < extents.x1 &&
++				pointerX > extents.x1);
++	Bool right = (pointerX > (extents.x2) &&
++				 pointerX < (extents.x2));
+ 
+ 	/* detect corners first */
+ 	if (top)

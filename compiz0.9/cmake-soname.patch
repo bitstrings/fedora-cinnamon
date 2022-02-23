@@ -1,0 +1,13 @@
+--- a/compizconfig/gsettings/gsettings_backend_shared/CMakeLists.txt	2019-11-27 15:24:31.000000000 +0200
++++ b/compizconfig/gsettings/gsettings_backend_shared/CMakeLists.txt	2021-04-12 19:07:47.365378340 +0300
+@@ -49,6 +49,10 @@
+     add_library (compizconfig_gsettings_backend SHARED
+                  ${CMAKE_CURRENT_SOURCE_DIR}/ccs_gsettings_backend.c)
+ 
++    set_target_properties(compizconfig_gsettings_backend PROPERTIES
++                          VERSION 0.0.0
++                          SOVERSION 0)
++
+     set (GSETTINGS_BACKEND_SHARED_ADDITIONAL_LIBRARIES
+ 	 compizconfig_gsettings_backend_interface
+ 	 compizconfig_gsettings_util
