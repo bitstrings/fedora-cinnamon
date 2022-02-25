@@ -13,19 +13,19 @@
 Name:           %{appname}%{compatsuffix}
 Version:        0.9.14.1
 %global shortversion %(cut -d. -f-3 <<<"%{version}")
-Release:        1.07%{?dist}
+Release:        1.17%{?dist}
 Epoch:          1
 Summary:        OpenGL compositing window manager
 
 ## Python:      tests/experimental-memcheck/compiz.supp
 License:        GPLv2 and GPLv2+ and LGPLv2+ and MIT and Python
 URL:            https://launchpad.net/compiz
-Source0:        %{url}/%{shortversion}/%{version}/+download/%{appname}-%{version}.tar.xz
+Source0:        %{appname}-%{version}.tar.xz
 
-Patch0:         gcc10_common_fix.patch
-Patch1:         remove-unused-or-broken-buttons.patch
+#Patch0:         gcc10_common_fix.patch
+#Patch1:         remove-unused-or-broken-buttons.patch
 Patch2:         cmake-soname.patch
-Patch3:         aa9ebef8-a5f3-11eb-9412-002481e91f22.diff
+#Patch3:         aa9ebef8-a5f3-11eb-9412-002481e91f22.diff
 
 BuildRequires:  cmake >= 3.17
 BuildRequires:  gcc
@@ -127,6 +127,7 @@ This package contains Graphical manager for CompizConfig settings.
     -DCOMPIZ_PACKAGING_ENABLED=On \
     -DCOMPIZ_WERROR=Off \
     -DCYTHON_BIN=%{_bindir}/cython \
+    -DBUILD_GLES=OFF \
     %{nil}
 %cmake_build
 

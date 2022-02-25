@@ -1,0 +1,14 @@
+--- src/base/ftlcdfil.c	2021-07-04 23:41:53.000000000 -0400
++++ src/base/ftlcdfil.c.new	2022-03-23 16:48:03.560624261 -0400
+@@ -310,9 +310,9 @@
+                            FT_LcdFilter  filter )
+   {
+     static const FT_LcdFiveTapFilter  default_weights =
+-                   { 0x08, 0x4d, 0x56, 0x4d, 0x08 };
++                   { 0x11, 0x4f, 0x63, 0x4f, 0x11 };
+     static const FT_LcdFiveTapFilter  light_weights =
+-                   { 0x00, 0x55, 0x56, 0x55, 0x00 };
++                   { 0x05, 0x4d, 0x60, 0x4d, 0x05 };
+ 
+ 
+     if ( !library )

@@ -10,7 +10,7 @@
 
 Name:          mutter
 Version:       41.4
-Release:       134.gq
+Release:       140.gq
 Summary:       Window and compositing manager based on Clutter
 
 License:       GPLv2+
@@ -107,8 +107,8 @@ Provides: firstboot(windowmanager) = mutter
 #Patch149: upstream.patch
 #Patch242: 1241.patch
 #Patch246: 2158.patch
-#Patch250: mr1441.diff
-#Patch251: mr1877.diff
+#Patch250: mr1441.patch
+#Patch251: mr1877.patch
 
 %description
 Mutter is a window and compositing manager that displays and manages

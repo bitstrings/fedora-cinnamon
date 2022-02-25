@@ -2,7 +2,7 @@
 
 Name:    compiz-plugins-extra
 Version: 0.8.18
-Release: 105%{?dist}
+Release: 106%{?dist}
 Epoch:   1
 Summary: Additional Compiz Fusion plugins for Compiz
 
@@ -47,6 +47,7 @@ This package contain development files required for developing other plugins
 
 %prep
 %setup -q -n %{name}-v%{version}
+patch -p1 < %{PATCH0}
 
 %build
 ./autogen.sh

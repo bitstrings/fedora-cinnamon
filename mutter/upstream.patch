@@ -1,246 +1,400 @@
-diff --git a/clutter/clutter/clutter-frame-clock.c b/clutter/clutter/clutter-frame-clock.c
-index 16098b70f..480cc4a91 100644
---- a/clutter/clutter/clutter-frame-clock.c
-+++ b/clutter/clutter/clutter-frame-clock.c
-@@ -45,10 +45,7 @@ typedef struct _EstimateQueue
-   int next_index;
- } EstimateQueue;
+diff --git a/po/de.po b/po/de.po
+index 270b87044..55d55c391 100644
+--- a/po/de.po
++++ b/po/de.po
+@@ -16,8 +16,8 @@ msgid ""
+ msgstr ""
+ "Project-Id-Version: mutter master\n"
+ "Report-Msgid-Bugs-To: https://gitlab.gnome.org/GNOME/mutter/issues\n"
+-"POT-Creation-Date: 2021-08-30 22:01+0000\n"
+-"PO-Revision-Date: 2021-09-01 18:20+0200\n"
++"POT-Creation-Date: 2022-02-07 19:25+0000\n"
++"PO-Revision-Date: 2022-02-19 14:53+0100\n"
+ "Last-Translator: Philipp Kiemle <philipp.kiemle@gmail.com>\n"
+ "Language-Team: Deutsch <gnome-de@gnome.org>\n"
+ "Language: de\n"
+@@ -25,7 +25,7 @@ msgstr ""
+ "Content-Type: text/plain; charset=UTF-8\n"
+ "Content-Transfer-Encoding: 8bit\n"
+ "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+-"X-Generator: Poedit 3.0\n"
++"X-Generator: Poedit 3.0.1\n"
  
--/* When heuristic render time is off,
-- * wait 2ms after vblank before starting to draw next frame.
-- */
--#define SYNC_DELAY_FALLBACK_US ms2us (2)
-+#define SYNC_DELAY_FALLBACK_FRACTION 0.875
+ #: data/50-mutter-navigation.xml:6
+ msgid "Navigation"
+@@ -652,19 +652,15 @@ msgid "Compositor"
+ msgstr "Compositor"
  
- typedef struct _ClutterFrameListener
- {
-@@ -320,7 +317,7 @@ clutter_frame_clock_compute_max_render_time_us (ClutterFrameClock *frame_clock)
-   if (!frame_clock->got_measurements_last_frame ||
-       G_UNLIKELY (clutter_paint_debug_flags &
-                   CLUTTER_DEBUG_DISABLE_DYNAMIC_MAX_RENDER_TIME))
--    return refresh_interval_us - SYNC_DELAY_FALLBACK_US;
-+    return refresh_interval_us * SYNC_DELAY_FALLBACK_FRACTION;
+ #: src/backends/x11/meta-clutter-backend-x11.c:237
+-#, fuzzy
+-#| msgid "X Display to use"
+ msgid "X display to use"
+ msgstr "Zu verwendende X-Anzeige"
  
-   for (i = 0; i < ESTIMATE_QUEUE_LENGTH; ++i)
+ #: src/backends/x11/meta-clutter-backend-x11.c:243
+-#, fuzzy
+-#| msgid "X Display to use"
+ msgid "X screen to use"
+-msgstr "Zu verwendende X-Anzeige"
++msgstr "Zu verwendender X-Bildschirm"
+ 
+ #: src/backends/x11/meta-clutter-backend-x11.c:248
+-#: src/core/meta-context-main.c:583
++#: src/core/meta-context-main.c:585
+ msgid "Make X calls synchronous"
+ msgstr "X-Aufrufe abgleichen"
+ 
+@@ -704,64 +700,64 @@ msgstr ""
+ "Sie können der Anwendung noch etwas Zeit geben oder ein sofortiges Beenden "
+ "erzwingen."
+ 
+-#: src/core/meta-close-dialog-default.c:165
++#: src/core/meta-close-dialog-default.c:164
+ msgid "_Force Quit"
+ msgstr "_Beenden erzwingen"
+ 
+-#: src/core/meta-close-dialog-default.c:165
++#: src/core/meta-close-dialog-default.c:164
+ msgid "_Wait"
+ msgstr "_Warten"
+ 
+-#: src/core/meta-context-main.c:553
++#: src/core/meta-context-main.c:555
+ msgid "Replace the running window manager"
+ msgstr "Den aktuellen Fensterverwalter ersetzen"
+ 
+-#: src/core/meta-context-main.c:559
++#: src/core/meta-context-main.c:561
+ msgid "X Display to use"
+ msgstr "Zu verwendende X-Anzeige"
+ 
+-#: src/core/meta-context-main.c:565
++#: src/core/meta-context-main.c:567
+ msgid "Disable connection to session manager"
+ msgstr "Verbindung zur Sitzungsverwaltung deaktivieren"
+ 
+-#: src/core/meta-context-main.c:571
++#: src/core/meta-context-main.c:573
+ msgid "Specify session management ID"
+ msgstr "Kennung der Sitzungsverwaltung angeben"
+ 
+-#: src/core/meta-context-main.c:577
++#: src/core/meta-context-main.c:579
+ msgid "Initialize session from savefile"
+ msgstr "Sitzung anhand gespeicherter Datei starten"
+ 
+-#: src/core/meta-context-main.c:590
++#: src/core/meta-context-main.c:592
+ msgid "Run as a wayland compositor"
+ msgstr "Als Wayland-Compositor ausführen"
+ 
+-#: src/core/meta-context-main.c:596
++#: src/core/meta-context-main.c:598
+ msgid "Run as a nested compositor"
+ msgstr "Als eingebetteten Compositor ausführen"
+ 
+-#: src/core/meta-context-main.c:602
++#: src/core/meta-context-main.c:604
+ msgid "Run wayland compositor without starting Xwayland"
+ msgstr "Wayland-Compositor ausführen, ohne Xwayland zu starten"
+ 
+-#: src/core/meta-context-main.c:608
++#: src/core/meta-context-main.c:610
+ msgid "Specify Wayland display name to use"
+ msgstr "Name der Wayland-Anzeige festlegen"
+ 
+-#: src/core/meta-context-main.c:616
++#: src/core/meta-context-main.c:618
+ msgid "Run as a full display server, rather than nested"
+ msgstr "Als vollwertigen Display-Server verwenden (nicht eingebettet)"
+ 
+-#: src/core/meta-context-main.c:621
++#: src/core/meta-context-main.c:623
+ msgid "Run as a headless display server"
+ msgstr "Als Display-Server ohne grafische Oberfläche verwenden"
+ 
+ # Für WxH@R siehe https://gitlab.gnome.org/GNOME/mutter/-/blob/master/src/core/main.c#L498
+-#: src/core/meta-context-main.c:626
++#: src/core/meta-context-main.c:628
+ msgid "Add persistent virtual monitor (WxH or WxH@R)"
+ msgstr "Einen persistenten virtuellen Monitor hinzufügen (BxH oder BxH@W)"
+ 
+-#: src/core/meta-context-main.c:632
++#: src/core/meta-context-main.c:639
+ msgid "Run with X11 backend"
+ msgstr "Mit X11-Backend ausführen"
+ 
+@@ -784,11 +780,11 @@ msgstr "Bildschirm wechseln"
+ msgid "Show on-screen help"
+ msgstr "Bildschirmhilfe anzeigen"
+ 
+-#: src/core/mutter.c:47
++#: src/core/mutter.c:48
+ msgid "Print version"
+ msgstr "Version ausgeben"
+ 
+-#: src/core/mutter.c:53
++#: src/core/mutter.c:54
+ msgid "Mutter plugin to use"
+ msgstr "Zu benutzendes Mutter-Plugin"
+ 
+diff --git a/src/backends/native/meta-renderer-native.c b/src/backends/native/meta-renderer-native.c
+index 4c6fa5b70..4e8786a4d 100644
+--- a/src/backends/native/meta-renderer-native.c
++++ b/src/backends/native/meta-renderer-native.c
+@@ -1975,7 +1975,7 @@ meta_renderer_native_create_renderer_gpu_data (MetaRendererNative  *renderer_nat
+   MetaBackend *backend = meta_renderer_get_backend (renderer);
+   MetaDevicePool *device_pool =
+     meta_backend_native_get_device_pool (META_BACKEND_NATIVE (backend));
+-  MetaRendererNativeGpuData *gbm_renderer_gpu_data;
++  MetaRendererNativeGpuData *gbm_renderer_gpu_data = NULL;
+   MetaDeviceFileFlags device_file_flags = META_DEVICE_FILE_FLAG_NONE;
+   g_autoptr (MetaDeviceFile) device_file = NULL;
+   GError *gbm_error = NULL;
+@@ -1998,15 +1998,27 @@ meta_renderer_native_create_renderer_gpu_data (MetaRendererNative  *renderer_nat
+   if (!device_file)
+     return NULL;
+ 
+-  gbm_renderer_gpu_data = create_renderer_gpu_data_gbm (renderer_native,
+-                                                        gpu_kms,
+-                                                        device_file,
+-                                                        &gbm_error);
+-  if (gbm_renderer_gpu_data)
++#ifdef HAVE_EGL_DEVICE
++  if (g_strcmp0 (getenv ("MUTTER_DEBUG_FORCE_EGL_STREAM"), "1") != 0)
++#endif
++    {
++      gbm_renderer_gpu_data = create_renderer_gpu_data_gbm (renderer_native,
++                                                            gpu_kms,
++                                                            device_file,
++                                                            &gbm_error);
++      if (gbm_renderer_gpu_data)
++        {
++          if (gbm_renderer_gpu_data->secondary.is_hardware_rendering)
++            return gbm_renderer_gpu_data;
++        }
++    }
++#ifdef HAVE_EGL_DEVICE
++  else
      {
-@@ -646,13 +643,14 @@ clutter_frame_clock_dispatch (ClutterFrameClock *frame_clock,
-   COGL_TRACE_END (ClutterFrameClockEvents);
+-      if (gbm_renderer_gpu_data->secondary.is_hardware_rendering)
+-        return gbm_renderer_gpu_data;
++      g_set_error (&gbm_error, G_IO_ERROR, G_IO_ERROR_FAILED,
++                   "GBM backend was disabled using env var");
+     }
++#endif
  
-   COGL_TRACE_BEGIN (ClutterFrameClockTimelines, "Frame Clock (timelines)");
-+  if (frame_clock->is_next_presentation_time_valid)
-+    time_us = frame_clock->next_presentation_time_us;
-   advance_timelines (frame_clock, time_us);
-   COGL_TRACE_END (ClutterFrameClockTimelines);
+ #ifdef HAVE_EGL_DEVICE
+   egl_stream_renderer_gpu_data =
+diff --git a/src/wayland/meta-xwayland-dnd.c b/src/wayland/meta-xwayland-dnd.c
+index e8d38c0be..e30b05ea6 100644
+--- a/src/wayland/meta-xwayland-dnd.c
++++ b/src/wayland/meta-xwayland-dnd.c
+@@ -58,9 +58,10 @@ struct _MetaXWaylandDnd
+   Time client_message_timestamp;
+   MetaWaylandDataSource *source; /* owned by MetaWaylandDataDevice */
+   MetaWaylandSurface *focus_surface;
+-  Window dnd_window; /* Mutter-internal window, acts as peer on wayland drop sites */
++  Window dnd_window[2]; /* Mutter-internal windows, act as peer on wayland drop sites */
+   Window dnd_dest; /* X11 drag dest window */
+   guint32 last_motion_time;
++  int current_dnd_window;
+ };
  
-   COGL_TRACE_BEGIN (ClutterFrameClockFrame, "Frame Clock (frame)");
-   result = frame_clock->listener.iface->frame (frame_clock,
-                                                frame_count,
--                                               time_us,
-                                                frame_clock->listener.user_data);
-   COGL_TRACE_END (ClutterFrameClockFrame);
+ enum
+@@ -134,6 +135,86 @@ atom_to_action (Atom atom)
+     return WL_DATA_DEVICE_MANAGER_DND_ACTION_NONE;
+ }
  
-diff --git a/clutter/clutter/clutter-frame-clock.h b/clutter/clutter/clutter-frame-clock.h
-index e71b54987..91e6b3a13 100644
---- a/clutter/clutter/clutter-frame-clock.h
-+++ b/clutter/clutter/clutter-frame-clock.h
-@@ -50,7 +50,6 @@ typedef struct _ClutterFrameListenerIface
-                          gpointer           user_data);
-   ClutterFrameResult (* frame) (ClutterFrameClock *frame_clock,
-                                 int64_t            frame_count,
--                                int64_t            time_us,
-                                 gpointer           user_data);
- } ClutterFrameListenerIface;
++static Window
++current_dnd_window (MetaXWaylandDnd *dnd)
++{
++  return dnd->dnd_window[dnd->current_dnd_window];
++}
++
++static Window
++next_dnd_window (MetaXWaylandDnd *dnd)
++{
++  dnd->current_dnd_window =
++    (dnd->current_dnd_window + 1) % G_N_ELEMENTS (dnd->dnd_window);
++
++  return current_dnd_window (dnd);
++}
++
++static void
++create_dnd_windows (MetaXWaylandDnd *dnd,
++                    Display         *xdisplay)
++{
++  XSetWindowAttributes attributes;
++  guint32 version = XDND_VERSION;
++  int i;
++
++  attributes.event_mask = PropertyChangeMask | SubstructureNotifyMask;
++  attributes.override_redirect = True;
++
++  for (i = 0; i < G_N_ELEMENTS (dnd->dnd_window); i++)
++    {
++      dnd->dnd_window[i] =
++        XCreateWindow (xdisplay,
++                       gdk_x11_window_get_xid (gdk_get_default_root_window ()),
++                       -1, -1, 1, 1,
++                       0, /* border width */
++                       0, /* depth */
++                       InputOnly, /* class */
++                       CopyFromParent, /* visual */
++                       CWEventMask | CWOverrideRedirect,
++                       &attributes);
++
++      XChangeProperty (xdisplay, dnd->dnd_window[i],
++                       xdnd_atoms[ATOM_DND_AWARE],
++                       XA_ATOM, 32, PropModeReplace,
++                       (guchar*) &version, 1);
++    }
++}
++
++static void
++destroy_dnd_windows (MetaXWaylandDnd *dnd,
++                     Display         *xdisplay)
++{
++  int i;
++
++  for (i = 0; i < G_N_ELEMENTS (dnd->dnd_window); i++)
++    {
++      XDestroyWindow (xdisplay, dnd->dnd_window[i]);
++      dnd->dnd_window[i] = None;
++    }
++}
++
++static void
++hide_dnd_window (MetaXWaylandDnd *dnd,
++                 Display         *xdisplay,
++                 int              index)
++{
++  g_assert (index < G_N_ELEMENTS (dnd->dnd_window));
++
++  XMoveResizeWindow (xdisplay, dnd->dnd_window[index], -1, -1, 1, 1);
++  XUnmapWindow (xdisplay, dnd->dnd_window[index]);
++}
++
++static void
++hide_all_dnd_windows (MetaXWaylandDnd *dnd,
++                      Display         *xdisplay)
++{
++  int i;
++
++  for (i = 0; i < G_N_ELEMENTS (dnd->dnd_window); i++)
++    hide_dnd_window (dnd, xdisplay, i);
++}
++
+ static void
+ xdnd_send_enter (MetaXWaylandDnd *dnd,
+                  Window           dest)
+@@ -296,7 +377,7 @@ xdnd_send_finished (MetaXWaylandDnd *dnd,
+   xev.xclient.format = 32;
+   xev.xclient.window = dest;
  
-diff --git a/clutter/clutter/clutter-stage-view.c b/clutter/clutter/clutter-stage-view.c
-index 9b7345983..ea7f57248 100644
---- a/clutter/clutter/clutter-stage-view.c
-+++ b/clutter/clutter/clutter-stage-view.c
-@@ -1146,7 +1146,6 @@ end_frame_timing_measurement (ClutterStageView *view)
- static ClutterFrameResult
- handle_frame_clock_frame (ClutterFrameClock *frame_clock,
-                           int64_t            frame_count,
--                          int64_t            time_us,
-                           gpointer           user_data)
+-  xev.xclient.data.l[0] = dnd->dnd_window;
++  xev.xclient.data.l[0] = current_dnd_window (dnd);
+ 
+   if (accepted)
+     {
+@@ -326,7 +407,7 @@ xdnd_send_status (MetaXWaylandDnd *dnd,
+   xev.xclient.format = 32;
+   xev.xclient.window = dest;
+ 
+-  xev.xclient.data.l[0] = dnd->dnd_window;
++  xev.xclient.data.l[0] = current_dnd_window (dnd);
+   xev.xclient.data.l[1] = 1 << 1; /* Bit 2: dest wants XdndPosition messages */
+   xev.xclient.data.l[4] = action_to_atom (action);
+ 
+@@ -358,8 +439,7 @@ meta_xwayland_end_dnd_grab (MetaWaylandDataDevice *data_device,
+       meta_wayland_data_device_end_drag (data_device);
+     }
+ 
+-  XMoveResizeWindow (xdisplay, dnd->dnd_window, -1, -1, 1, 1);
+-  XUnmapWindow (xdisplay, dnd->dnd_window);
++  hide_all_dnd_windows (dnd, xdisplay);
+ }
+ 
+ static void
+@@ -654,7 +734,8 @@ repick_drop_surface (MetaWaylandCompositor *compositor,
+                      MetaWaylandDragGrab   *drag_grab,
+                      const ClutterEvent    *event)
  {
-   ClutterStageView *view = user_data;
-diff --git a/clutter/clutter/clutter-timeline.c b/clutter/clutter/clutter-timeline.c
-index 0c9fd2c1c..8a73c5005 100644
---- a/clutter/clutter/clutter-timeline.c
-+++ b/clutter/clutter/clutter-timeline.c
-@@ -33,7 +33,7 @@
-  * be used to update the state of the actors.
-  *
-  * It is important to note that #ClutterTimeline is not a generic API for
-- * calling closures after an interval; each Timeline is tied into the master
-+ * calling closures after an interval; each Timeline is tied into a frame
-  * clock used to drive the frame cycle. If you need to schedule a closure
-  * after an interval, see clutter_threads_add_timeout() instead.
-  *
-@@ -162,7 +162,7 @@ struct _ClutterTimelinePrivate
-   guint is_playing         : 1;
+-  Display *xdisplay = GDK_DISPLAY_XDISPLAY (gdk_display_get_default ());
++  MetaX11Display *x11_display = meta_get_display ()->x11_display;
++  Display *xdisplay = meta_x11_display_get_xdisplay (x11_display);
+   MetaXWaylandDnd *dnd = compositor->xwayland_manager.dnd;
+   MetaWaylandSurface *focus = NULL;
+   MetaWindow *focus_window;
+@@ -673,8 +754,13 @@ repick_drop_surface (MetaWaylandCompositor *compositor,
+   if (focus_window &&
+       focus_window->client_type == META_WINDOW_CLIENT_TYPE_WAYLAND)
+     {
+-      XMapRaised (xdisplay, dnd->dnd_window);
+-      XMoveResizeWindow (xdisplay, dnd->dnd_window,
++      Window dnd_window;
++
++      hide_dnd_window (dnd, xdisplay, dnd->current_dnd_window);
++      dnd_window = next_dnd_window (dnd);
++
++      XMapRaised (xdisplay, dnd_window);
++      XMoveResizeWindow (xdisplay, dnd_window,
+                          focus_window->rect.x,
+                          focus_window->rect.y,
+                          focus_window->rect.width,
+@@ -682,8 +768,7 @@ repick_drop_surface (MetaWaylandCompositor *compositor,
+     }
+   else
+     {
+-      XMoveResizeWindow (xdisplay, dnd->dnd_window, -1, -1, 1, 1);
+-      XUnmapWindow (xdisplay, dnd->dnd_window);
++      hide_all_dnd_windows (dnd, xdisplay);
+     }
+ }
  
-   /* If we've just started playing and haven't yet gotten
--   * a tick from the master clock
-+   * a tick from the frame clock
-    */
-   guint waiting_first_tick : 1;
-   guint auto_reverse       : 1;
-@@ -1880,9 +1880,11 @@ _clutter_timeline_advance (ClutterTimeline *timeline,
-  * @tick_time: time of advance
-  *
-  * Advances @timeline based on the time passed in @tick_time. This
-- * function is called by the master clock. The @timeline will use this
-- * interval to emit the #ClutterTimeline::new-frame signal and
-- * eventually skip frames.
-+ * function is called by the frame clock and ideally passes the next
-+ * presentation time in which consequences of our timeline will be visible.
-+ * Otherwise an estimate using the current monotonic time is also acceptable.
-+ * The @timeline will use this interval to emit the #ClutterTimeline::new-frame
-+ * signal and eventually skip frames.
-  */
+@@ -951,8 +1036,7 @@ meta_xwayland_init_dnd (Display *xdisplay)
+   MetaWaylandCompositor *compositor = meta_wayland_compositor_get_default ();
+   MetaXWaylandManager *manager = &compositor->xwayland_manager;
+   MetaXWaylandDnd *dnd = manager->dnd;
+-  XSetWindowAttributes attributes;
+-  guint32 i, version = XDND_VERSION;
++  guint32 i;
+ 
+   g_assert (manager->dnd == NULL);
+ 
+@@ -961,22 +1045,8 @@ meta_xwayland_init_dnd (Display *xdisplay)
+   for (i = 0; i < N_DND_ATOMS; i++)
+     xdnd_atoms[i] = gdk_x11_get_xatom_by_name (atom_names[i]);
+ 
+-  attributes.event_mask = PropertyChangeMask | SubstructureNotifyMask;
+-  attributes.override_redirect = True;
+-
+-  dnd->dnd_window = XCreateWindow (xdisplay,
+-                                   gdk_x11_window_get_xid (gdk_get_default_root_window ()),
+-                                   -1, -1, 1, 1,
+-                                   0, /* border width */
+-                                   0, /* depth */
+-                                   InputOnly, /* class */
+-                                   CopyFromParent, /* visual */
+-                                   CWEventMask | CWOverrideRedirect,
+-                                   &attributes);
+-  XChangeProperty (xdisplay, dnd->dnd_window,
+-                   xdnd_atoms[ATOM_DND_AWARE],
+-                   XA_ATOM, 32, PropModeReplace,
+-                   (guchar*) &version, 1);
++  create_dnd_windows (dnd, xdisplay);
++  dnd->current_dnd_window = 0;
+ }
+ 
  void
- _clutter_timeline_do_tick (ClutterTimeline *timeline,
-diff --git a/src/tests/clutter/conform/frame-clock-timeline.c b/src/tests/clutter/conform/frame-clock-timeline.c
-index 0f9f04d79..fe001b55c 100644
---- a/src/tests/clutter/conform/frame-clock-timeline.c
-+++ b/src/tests/clutter/conform/frame-clock-timeline.c
-@@ -2,11 +2,11 @@
- #include "tests/clutter-test-utils.h"
+@@ -987,8 +1057,7 @@ meta_xwayland_shutdown_dnd (MetaXWaylandManager *manager,
  
- static const float refresh_rate = 60.0;
-+static const int64_t refresh_interval_us = G_USEC_PER_SEC / refresh_rate;
+   g_assert (dnd != NULL);
  
- static ClutterFrameResult
- timeline_frame_clock_frame (ClutterFrameClock *frame_clock,
-                             int64_t            frame_count,
--                            int64_t            time_us,
-                             gpointer           user_data)
- {
-   ClutterFrameInfo frame_info;
-@@ -61,6 +61,8 @@ frame_clock_timeline_basic (void)
-   int frame_counter;
-   int64_t before_us;
-   int64_t after_us;
-+  int64_t duration_us;
-+  int64_t lateness_us;
+-  XDestroyWindow (xdisplay, dnd->dnd_window);
+-  dnd->dnd_window = None;
++  destroy_dnd_windows (dnd, xdisplay);
  
-   main_loop = g_main_loop_new (NULL, FALSE);
-   frame_clock = clutter_frame_clock_new (refresh_rate,
-@@ -97,10 +99,10 @@ frame_clock_timeline_basic (void)
-   g_main_loop_run (main_loop);
- 
-   after_us = g_get_monotonic_time ();
-+  duration_us = after_us - before_us;
-+  lateness_us = duration_us - ms2us (clutter_timeline_get_duration (timeline));
- 
--  g_assert_cmpint (after_us - before_us,
--                   >=,
--                   ms2us (clutter_timeline_get_duration (timeline)));
-+  g_assert_cmpint (lateness_us, >, -refresh_interval_us);
- 
-   g_assert_true (marker1_reached);
- 
-@@ -140,6 +142,8 @@ frame_clock_timeline_switch (void)
-   int frame_counter;
-   int64_t before_us;
-   int64_t after_us;
-+  int64_t duration_us;
-+  int64_t lateness_us;
- 
-   main_loop = g_main_loop_new (NULL, FALSE);
- 
-@@ -181,10 +185,15 @@ frame_clock_timeline_switch (void)
-   g_main_loop_run (main_loop);
- 
-   after_us = g_get_monotonic_time ();
-+  duration_us = after_us - before_us;
-+  lateness_us = duration_us - ms2us (clutter_timeline_get_duration (timeline));
- 
--  g_assert_cmpint (after_us - before_us,
--                   >=,
--                   ms2us (clutter_timeline_get_duration (timeline)));
-+  /* Our threshold is two frames. This is because switching a timeline to a
-+   * new clock of the same frequency shifts the phase up to one frame. And
-+   * this timeline has seen two different clocks so its overall duration may
-+   * be out by almost two frames. But more than two frames is a bug.
-+   */
-+  g_assert_cmpint (lateness_us, >, -2 * refresh_interval_us);
- 
-   g_assert (clutter_timeline_get_frame_clock (timeline) == frame_clock2);
- 
-diff --git a/src/tests/clutter/conform/frame-clock.c b/src/tests/clutter/conform/frame-clock.c
-index 810c39a02..cf118de1b 100644
---- a/src/tests/clutter/conform/frame-clock.c
-+++ b/src/tests/clutter/conform/frame-clock.c
-@@ -92,7 +92,6 @@ fake_hw_clock_new (ClutterFrameClock *frame_clock,
- static ClutterFrameResult
- frame_clock_frame (ClutterFrameClock *frame_clock,
-                    int64_t            frame_count,
--                   int64_t            time_us,
-                    gpointer           user_data)
- {
-   FrameClockTest *test = user_data;
-@@ -187,7 +186,6 @@ schedule_update_idle (gpointer user_data)
- static ClutterFrameResult
- immediate_frame_clock_frame (ClutterFrameClock *frame_clock,
-                              int64_t            frame_count,
--                             int64_t            time_us,
-                              gpointer           user_data)
- {
-   GMainLoop *main_loop = user_data;
-@@ -262,7 +260,6 @@ schedule_update_timeout (gpointer user_data)
- static ClutterFrameResult
- delayed_damage_frame_clock_frame (ClutterFrameClock *frame_clock,
-                                   int64_t            frame_count,
--                                  int64_t            time_us,
-                                   gpointer           user_data)
- {
-   FrameClockTest *test = user_data;
-@@ -336,7 +333,6 @@ frame_clock_delayed_damage (void)
- static ClutterFrameResult
- no_damage_frame_clock_frame (ClutterFrameClock *frame_clock,
-                              int64_t            frame_count,
--                             int64_t            time_us,
-                              gpointer           user_data)
- {
-   g_assert_not_reached ();
-@@ -390,7 +386,6 @@ typedef struct _UpdateNowFrameClockTest
- static ClutterFrameResult
- update_now_frame_clock_frame (ClutterFrameClock *frame_clock,
-                               int64_t            frame_count,
--                              int64_t            time_us,
-                               gpointer           user_data)
- {
-   UpdateNowFrameClockTest *test = user_data;
-@@ -497,7 +492,6 @@ before_frame_frame_clock_before_frame (ClutterFrameClock *frame_clock,
- static ClutterFrameResult
- before_frame_frame_clock_frame (ClutterFrameClock *frame_clock,
-                                 int64_t            frame_count,
--                                int64_t            time_us,
-                                 gpointer           user_data)
- {
-   int64_t *expected_frame_count = user_data;
-@@ -567,7 +561,6 @@ typedef struct _InhibitTest
- static ClutterFrameResult
- inhibit_frame_clock_frame (ClutterFrameClock *frame_clock,
-                            int64_t            frame_count,
--                           int64_t            time_us,
-                            gpointer           user_data)
- {
-   InhibitTest *test = user_data;
-@@ -645,7 +638,6 @@ typedef struct _RescheduleOnIdleFrameClockTest
- static ClutterFrameResult
- reschedule_on_idle_clock_frame (ClutterFrameClock *frame_clock,
-                                 int64_t            frame_count,
--                                int64_t            time_us,
-                                 gpointer           user_data)
- {
-   RescheduleOnIdleFrameClockTest *test = user_data;
-@@ -773,7 +765,6 @@ notify_ready_and_schedule_update_idle (gpointer user_data)
- static ClutterFrameResult
- frame_clock_ready_frame (ClutterFrameClock *frame_clock,
-                          int64_t            frame_count,
--                         int64_t            time_us,
-                          gpointer           user_data)
- {
-   GMainLoop *main_loop = user_data;
+   g_free (dnd);
+   manager->dnd = NULL;
