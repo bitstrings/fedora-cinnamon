@@ -4,7 +4,7 @@
 Summary: A free and portable font rendering engine
 Name: freetype
 Version: 2.11.1
-Release: 123max%{?dist}
+Release: 125max%{?dist}
 License: (FTL or GPLv2+) and BSD and MIT and Public Domain and zlib with acknowledgement
 URL: http://www.freetype.org
 Source:  https://download.savannah.gnu.org/releases/freetype/freetype-%{version}.tar.xz
@@ -28,6 +28,7 @@ Patch5:  freetype-2.10.0-internal-outline.patch
 Patch6:  freetype-2.10.1-debughook.patch
 
 Patch10:  lcdfilter.patch
+Patch11:  ftoption.h.patch
 
 BuildRequires:  gcc
 BuildRequires: libX11-devel
@@ -92,6 +93,7 @@ popd
 %patch5 -p1 -b .internal-outline
 %patch6 -p1 -b .debughook
 %patch10 -p0
+%patch11 -p0
 
 %build
 
